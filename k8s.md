@@ -39,8 +39,6 @@ k8s本质是**一组服务器集群**，它提供了如下功能：
 
 k8s分为master和node
 
-
-
 master：集群的控制平面，负责集群的决策。通俗来说就是管理的。
 
 - ApiServer：资源操作的唯一入口，接收用户输入的命令，提供认证、授权、API注册和发现等机制
@@ -89,7 +87,7 @@ kubernetes还提供了各种存储系统。
 
 ### 2. 资源管理方式
 
-#### 1. 命令式
+#### （1）命令式
 
 kubctl命令可以对集群本身进行管理，在集群上进行容器化应用的安装部署。
 
@@ -106,12 +104,12 @@ kubctl命令可以对集群本身进行管理，在集群上进行容器化应�
 NAME   READY   UP-TO-DATE   AVAILABLE   AGE
 auth   2/2     2            2           23h
 ```
-#### 2. 常见操作
+#### （2）常见操作
 
 - create: 创建。连续执行两次相同的create会报错。
 - apply: 资源没有，就是创建。资源如果有，就是更新。如果yaml文件不变，它不会执行任何操作。
 
-#### 3. 资源对象
+#### （3）资源对象
 
 Deployment、Service、Pod是k8s最核心的3个资源对象。
 <div align=center><img alt="#" width="1320" height="1096" src=pic/资源对象.png></div>
