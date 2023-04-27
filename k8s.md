@@ -98,21 +98,60 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - kubeadm：搭建kubenetes集群的工具
 - 二进制包：依次下载每个组件的二进制包
 
-这里采用第二种方式，并且采用两台服务器，阿里云(centos)和腾讯云(ubuntu)。
+这里采用第二种方式，并且采用两台服务器，阿里云(centos)和腾讯云(centos)。
 
 ### 2. 环境初始化
+
+- 主机名解析
+
+  ```bash
+  43.143.70.145 master
+  121.41.55.89 node1
+  ```
+
+- 时间同步
+
+  ```bash
+  systemctl start chronyd
+  systemctl enable chronyd
+  date
+  ```
 
 - 禁用防火墙
 
   ```bash
-  sudo ufw disable
-  sudo ufw disable
+  systemctl stop firewalld
+  systemctl disable firewalld
   ```
 
 - 禁用iptables
 
   ```bash
-  # 和上面一样, https://serverfault.com/a/417913/942586
+  systemctl stop iptables
+  systemctl disable iptables
+  ```
+
+- 禁用selinux：它是linux系统的一个安全规则
+
+  ```bash
+  vim /etc/selinux/config
+  # 修改
+  SELINUX=disabled  
+  ```
+
+- 禁用swap分区
+
+  ```bash
+  # 注释掉swap分区
+  # dev/mapper/centos-swap swap
+  ```
+
+- 修改linux内核参数
+
+  ```bash
+  net.bridge.bridge-nf-call-ip6tables = 1
+  net.bridge.bridge-nf-call-iptables = 1
+  net.ipv4.ip_forward = 1
   ```
 
 ### 3. 安装组件
@@ -171,7 +210,11 @@ done
 集群初始化
 
 ```bash
-sudo kubeadm init # 会有点慢
+sudo kubeadm init \
+--kubernetes-version=v1.27.1 \
+--pod-network-cidr=10.244.0.0/16 \
+--service-cidr=10.96.0.0/12 \
+--apiserver-advertise-address=43.143.70.145
 ```
 
 ## 二、资源管理
