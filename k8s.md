@@ -98,6 +98,82 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - kubeadm：搭建kubenetes集群的工具
 - 二进制包：依次下载每个组件的二进制包
 
+这里采用第二种方式，并且采用两台服务器，阿里云(centos)和腾讯云(ubuntu)。
+
+### 2. 环境初始化
+
+- 禁用防火墙
+
+  ```bash
+  sudo ufw disable
+  sudo ufw disable
+  ```
+
+- 禁用iptables
+
+  ```bash
+  # 和上面一样, https://serverfault.com/a/417913/942586
+  ```
+
+### 3. 安装组件
+
+- 安装docker
+
+- 安装k8s组件
+
+  ```bash
+  # 使得 apt 支持 ssl 传输
+  sudo apt-get update && sudo apt-get install -y apt-transport-https
+  # 下载 gpg 密钥
+  curl https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
+  # 添加 k8s 镜像源 
+  sudo tee /etc/apt/sources.list.d/kubernetes.list <<EOF 
+  deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
+  EOF
+  # 更新源列表
+  sudo apt-get update
+  # 安装组件
+  sudo apt-get install -y kubelet kubeadm kubectl
+  ```
+
+### 4. 启动k8s服务
+
+```bash
+systemctl start kubelet
+systemctl enable kubelet
+```
+
+###  5. 集群安装
+
+安装集群，就是安装前面所说的master的4个节点和node的两个节点。
+
+先下载镜像，这些镜像由于在k8s仓库中，由于网络原因，无法连接，可以用下面的方案来解决。
+
+```bash
+# 分步执行，步骤1
+images=(
+    kube-apiserver:v1.27.1
+    kube-controller-manager:v1.27.1
+    kube-scheduler:v1.27.1
+    kube-proxy:v1.27.1
+    pause:3.9
+    etcd:3.5.7-0 
+    coredns:1.10.1 
+)
+# 步骤2
+for imageName in ${images[@]};do
+	docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
+	docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName k8s.gcr.io/$imageName
+  docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
+done
+```
+
+集群初始化
+
+```bash
+sudo kubeadm init # 会有点慢
+```
+
 ## 二、资源管理
 
 ### 1. 资源管理介绍
