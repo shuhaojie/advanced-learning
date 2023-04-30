@@ -142,11 +142,12 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - 禁用swap分区
 
   ```bash
+  vim /etc/fstab
   # 注释掉swap分区
   # dev/mapper/centos-swap swap
   ```
 
-- 修改linux内核参数
+- 修改linux内核参数，`vim /etc/sysctl.d/kubernetes.conf`
 
   ```bash
   net.bridge.bridge-nf-call-ip6tables = 1
@@ -154,35 +155,79 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
   net.ipv4.ip_forward = 1
   ```
 
+​		重新加载配置`sysctl -p`
+
+​		加载网桥过滤模块`modprobe br_netfilter`
+
+​        查看网桥过滤模块是否加载成功`lsmod | grep br_netfilter`
+
+- 配置ipvs功能
+
+  - 安装ipset和ipvsadmin: `yum install ipset ipvsadmin -y`
+
+  - 需要加载的模块写入脚本文件
+
+    ```bash
+    # 修改权限
+    chmod +x /etc/sysconfig/modules/ipvs.modules
+    # 写入文件
+    cat <<EOF > /etc/sysconfig/modules/ipvs.modules
+    #!/bin/bash
+    modprobe -- ip_vs
+    modprobe -- ip_vs_rr 
+    modprobe -- ip_vs_wrr
+    modprobe -- ip_vs_sh
+    modprobe -- nf_conntrack_ipv4
+    EOF
+    # 执行
+    /bin/bash /etc/sysconfig/modules/ipvs.modules
+    # 检查是否成功
+    lsmod | grep -e ip_vs -e nf_conntrack_ipv4
+    ```
+
 ### 3. 安装组件
 
 - 安装docker
 
+  ```
+  wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+  
+  yum list docker-ce--showduplicates
+  
+  yum install --setopt=obsoletes=0 docker-ce-18.06.3.ce-3.e17 -y
+  
+  cat <<EOF> /etc/docker/daemon.json
+  {
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "registry-mirrors":["https://kn0t2bca.mirror.aliyuncs.com"]
+  }
+  EOF 
+  
+  systemctl restart docker
+  # 开机自启动
+  systemctl enable docker
+  ```
+
 - 安装k8s组件
 
   ```bash
-  # 使得 apt 支持 ssl 传输
-  sudo apt-get update && sudo apt-get install -y apt-transport-https
-  # 下载 gpg 密钥
-  curl https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
-  # 添加 k8s 镜像源 
-  sudo tee /etc/apt/sources.list.d/kubernetes.list <<EOF 
-  deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
-  EOF
-  # 更新源列表
-  sudo apt-get update
-  # 安装组件
-  sudo apt-get install -y kubelet kubeadm kubectl
+  # 编辑
+  [kubernetes]
+  name=Kubernetes
+  baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+  enabled=1
+  gpgcheck=0
+  repo_gpgcheck=0
+  gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
+         http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+  # 软件安装
+  yum install --setopt=obsoletes=0 kubeadm-1.27.1-0 kubelet-1.27.1-0 kubectl-1.27.1-0 -y
+  # 修改配置文件,/etc/sysconfig/kubelet
+  KUBELET_EXTRA_ARGS="--cgroup-driver=systemd"
+  KUBE_PROXY_MODE="ipvs"
   ```
 
-### 4. 启动k8s服务
-
-```bash
-systemctl start kubelet
-systemctl enable kubelet
-```
-
-###  5. 集群安装
+###  4. 集群安装
 
 安装集群，就是安装前面所说的master的4个节点和node的两个节点。
 
@@ -202,7 +247,7 @@ images=(
 # 步骤2
 for imageName in ${images[@]};do
 	docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
-	docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName k8s.gcr.io/$imageName
+	docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName registry.k8s.io/$imageName
   docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
 done
 ```
@@ -210,11 +255,20 @@ done
 集群初始化
 
 ```bash
-sudo kubeadm init \
+kubeadm init \
 --kubernetes-version=v1.27.1 \
 --pod-network-cidr=10.244.0.0/16 \
 --service-cidr=10.96.0.0/12 \
---apiserver-advertise-address=43.143.70.145
+--apiserver-advertise-address=43.143.70.145 \
+--image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers
+```
+
+可能会存在如下问题
+
+```bash
+yum install containerd -y
+# https://github.com/containerd/containerd/issues/8139
+# https://www.cnblogs.com/immaxfang/p/16721407.html
 ```
 
 ## 二、资源管理
