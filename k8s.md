@@ -190,22 +190,27 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - 安装docker
 
   ```bash
+  # 下载docker源
   wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
-  
+  # 查看可以安装的docker版本
   yum list docker-ce--showduplicates
-  
+  # 安装docker
   yum install --setopt=obsoletes=0 docker-ce-18.06.3.ce-3.el7 -y
-  
-  cat <<EOF> /etc/docker/daemon.json
+  # 创建文件夹
+  mkdir /etc/docker
+  # 新建文件
+  cat <<EOF > /etc/docker/daemon.json
   {
   "exec-opts": ["native.cgroupdriver=systemd"],
   "registry-mirrors":["https://kn0t2bca.mirror.aliyuncs.com"]
   }
   EOF 
-  
+  # 重启docker
   systemctl restart docker
   # 开机自启动
   systemctl enable docker
+  # 查看docker版本
+  docker version
   ```
 
 - 安装k8s组件
@@ -221,12 +226,12 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
   gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
          http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
   # 软件安装
-  yum install --setopt=obsoletes=0 kubeadm-1.27.1-0 kubelet-1.27.1-0 kubectl-1.27.1-0 -y
+  yum install --setopt=obsoletes=0 kubeadm-1.17.4-0 kubelet-1.17.4-0 kubectl-1.17.4-0 -y
   # 修改配置文件,/etc/sysconfig/kubelet
   KUBELET_EXTRA_ARGS="--cgroup-driver=systemd"
   KUBE_PROXY_MODE="ipvs"
   # 设置开机自启动
-  systemctl enable docker
+  systemctl enable kubelet
   ```
 
 ###  4. 集群安装
@@ -240,13 +245,13 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 kubeadm config images list
 # 分步执行，步骤1
 images=(
-    kube-apiserver:v1.27.1
-    kube-controller-manager:v1.27.1
-    kube-scheduler:v1.27.1
-    kube-proxy:v1.27.1
-    pause:3.9
-    etcd:3.5.7-0 
-    coredns:1.10.1 
+    kube-apiserver:v1.17.4
+    kube-controller-manager:v1.17.4
+    kube-scheduler:v1.17.4
+    kube-proxy:v1.17.4
+    pause:3.1
+    etcd:3.4.3-0 
+    coredns:1.6.5 
 )
 # 步骤2
 for imageName in ${images[@]};do
@@ -259,8 +264,12 @@ done
 集群初始化
 
 ```bash
- \
---image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers
+kubeadm init \
+--kubernetes-version=v1.17.4 \
+--pod-network-cidr=10.244.0.0/16 \
+--service-cidr=10.96.0.0/12 \
+--apiserver-advertise-address=172.16.94.130
+--ignore-preflight-errors=all
 ```
 
 可能会存在如下问题
