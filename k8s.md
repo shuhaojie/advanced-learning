@@ -168,8 +168,6 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
   - 需要加载的模块写入脚本文件
 
     ```bash
-    # 修改权限
-    chmod +x /etc/sysconfig/modules/ipvs.modules
     # 写入文件
     cat <<EOF > /etc/sysconfig/modules/ipvs.modules
     #!/bin/bash
@@ -179,6 +177,8 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
     modprobe -- ip_vs_sh
     modprobe -- nf_conntrack_ipv4
     EOF
+    # 修改权限
+    chmod +x /etc/sysconfig/modules/ipvs.modules
     # 执行
     /bin/bash /etc/sysconfig/modules/ipvs.modules
     # 检查是否成功
@@ -189,12 +189,12 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 
 - 安装docker
 
-  ```
+  ```bash
   wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
   
   yum list docker-ce--showduplicates
   
-  yum install --setopt=obsoletes=0 docker-ce-18.06.3.ce-3.e17 -y
+  yum install --setopt=obsoletes=0 docker-ce-18.06.3.ce-3.el7 -y
   
   cat <<EOF> /etc/docker/daemon.json
   {
@@ -211,7 +211,7 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - 安装k8s组件
 
   ```bash
-  # 编辑
+  # 编辑/etc/yum.repos.d/kubernets.repo
   [kubernetes]
   name=Kubernetes
   baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
@@ -225,6 +225,8 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
   # 修改配置文件,/etc/sysconfig/kubelet
   KUBELET_EXTRA_ARGS="--cgroup-driver=systemd"
   KUBE_PROXY_MODE="ipvs"
+  # 设置开机自启动
+  systemctl enable docker
   ```
 
 ###  4. 集群安装
@@ -234,6 +236,8 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 先下载镜像，这些镜像由于在k8s仓库中，由于网络原因，无法连接，可以用下面的方案来解决。
 
 ```bash
+# 查看需要的镜像版版
+kubeadm config images list
 # 分步执行，步骤1
 images=(
     kube-apiserver:v1.27.1
@@ -255,11 +259,7 @@ done
 集群初始化
 
 ```bash
-kubeadm init \
---kubernetes-version=v1.27.1 \
---pod-network-cidr=10.244.0.0/16 \
---service-cidr=10.96.0.0/12 \
---apiserver-advertise-address=43.143.70.145 \
+ \
 --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers
 ```
 
