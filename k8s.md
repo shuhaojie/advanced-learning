@@ -28,7 +28,7 @@ k8s分为master和node
 
 <img src="assets/image-20230426213738106.png" alt="image-20230426213738106" style="zoom:70%;" />
 
-#### （1）master
+#### （1）控制节点master
 
 master：集群的控制平面，负责集群的决策。通俗来说就是管理的。它有四大组件：
 
@@ -37,7 +37,7 @@ master：集群的控制平面，负责集群的决策。通俗来说就是管�
 - ControllerManager：负责维护集群的状态，比如程序部署安排、故障检测、自动扩展、滚动更新等。通俗的说就是**由它来安排该谁干活**，Scheduler只算不安排。
 - Etcd：负责存储集群中各种资源对象的信息，它是一个数据库。通俗的说就是**它来记录现在谁在干活**，也可以用其他数据库mysql等，k8s默认是Etcd。
 
-#### （2）node
+#### （2）工作节点node
 
 node：集群的数据平面，负责为容器提供运行环境。通俗来说就是干活的。
 
@@ -280,34 +280,275 @@ yum install containerd -y
 # https://www.cnblogs.com/immaxfang/p/16721407.html
 ```
 
-## 二、资源管理
+> 部署集群花费时间较多，一直报错Initial timeout of 40s passed，暂时先部署minikube。后续可以参考下面的文档来部署。
+>
+> https://wiki.datagrand.com/pages/viewpage.action?pageId=123765862
+>
+> https://www.cnblogs.com/lei0213/p/15521526.html
 
-### 1. 资源管理介绍
+## 三、资源管理
 
-kubernetes的本质上就是一个集群系统，用户可以在集群中部署各种服务，所谓的部署服务，其实就是在kubernetes集群中运行一个个的容器，并将指定的程序
-跑在容器中。kubernetes的最小管理单元是pod而不是容器，所以只能将容器放在Pod中，而kubernetes一般也不会直接管理Pod，而是通过Pod控制器来管理
-Pod的。Pod可以提供服务之后，就要考虑如何访问Pod中服务，kubernetes提供了Service 资源实现这个功能。当然，如果Pod中程序的数据需要持久化，
-kubernetes还提供了各种存储系统。
+### 1. 什么是资源？
 
-### 2. 资源管理方式
+**在k8s中，所有的内容都抽象为资源，用户需要通过操作资源来管理k8s**。
 
-#### （1）命令式
+k8s的本质是一个集群系统，用户可以在集群中部署各种服务，**所谓的部署服务，其实就是在k8s集群中运行一个个的容器**，并将指定的程序跑在容器中。
 
-kubctl命令可以对集群本身进行管理，在集群上进行容器化应用的安装部署。
+**k8s的最小管理单元是pod而不是容器**，所以只能将容器放在Pod中，**而k8s一般也不会直接管理Pod**，而是通过**Pod控制器**(例如下图中的6种控制器)来管Pod。
 
-`kubectl [command] [type] [name] [flags]`
-> 前两个参数必须，后两个可选
+Pod可以提供服务之后，就要考虑如何访问Pod中服务，k8s提供了**Service资源**实现这个功能。
 
-- command: 对资源执行的操作，例如create、get、delete
-- type: 指定资源类型，比如deployment、pod、service
+<img src="assets/image-20230501153455829.png" alt="image-20230501153455829" style="zoom:70%;" />
+
+### 2. yaml语言
+
+yaml语言是一个类似于json，xml的标记性语言。yaml语言需要注意以下几点:
+
+- 大小写敏感
+- 使用缩进表示层级关系，**缩进的空格数不重要，只要相同的层级的元素左对齐即可**
+
+yaml支持以下几种数据类型：
+
+- 纯量：单个的，不可再分的值。
+
+  - 字符串：直接写值。如果有特殊字符，用双引号或者单引号包裹。
+  - 布尔值：`true`或者`True`
+  - 整数：`234`
+  - 浮点数：`3.14`
+  - Null：使用`~`表示Null
+  - 时间：`2023-05-01`,`yyyy-MM-dd`格式
+  - 日期：`2023-05-01T15:03:01`
+
+- 对象：键值对的集合
+
+  ```yaml
+  heima
+  	age: 15
+  	addr: Beijing
+  ```
+
+- 数组：一组按次序排列的值
+
+  ```
+  heima
+  	age: 15
+  	addr: 
+  	   - Beijing
+  	   - Shenzhen
+  ```
+
+yaml语言可以和json相互转换，见<https://www.json2yaml.com/>
+
+### 3. 资源管理方式
+
+#### （1）命令式对象管理
+
+直接使用命令去操作k8s资源。`kubectl`是k8s集群的命令行工具，通过它可以对集群进行管理，并在集群上进行容器化的安装部署。
+
+```bash
+# 前两个参数必须，后两个可选
+kubectl [command] [type] [name] [flags]
+```
+
+- command: 对资源执行的操作。
+  - 基本命令
+    - create：创建一个资源
+    - get：获取一个资源
+    - patch：更新一个资源
+    - delete：删除一个资源
+    - explain：展示资源文档
+  - 运行和调试
+    - run：在集群中运行一个指定的镜像
+    - expose：暴露资源位Service
+    - **describe**：显示资源内部信息。
+    - logs：输出容器在pod中的日志
+    - attach：进入运行中的容器
+    - exec：执行容器中的一个命令
+    - **scale**：扩充pod的数量
+  - 高级命令
+    - apply：通过文件对资源进行配置
+    - label：更新资源上的标签
+  - 其他命令
+    - version：查看版本
+    - cluster-info：集群信息
+- type: 指定资源类型
+  - 集群级别资源
+    - nodes：集群组成部分
+    - namespaces：隔离pod
+  - pod资源
+    - pods：装载容器
+  - pod资源控制器
+    - deployments
+    - replicasets
+    - jobs
+  - 服务发现资源
+    - services：统一pod对外接口
+    - ingress：统一pod对外接口
+  - 存储资源
+    - persistentvolumes：存储
+  - 配置资源
+    - configmaps：配置
+    - secrets：配置
 - name: 指定资源的名称，名称大小写敏感
 - flags: 指定额外的可选参数
 
-例如`kubectl get deployment`，得到的如下
-```bash
-NAME   READY   UP-TO-DATE   AVAILABLE   AGE
-auth   2/2     2            2           23h
+#### （2）命令式对象配置
+
+通过命令配置和配置文件去操作k8s资源。
+
+例子：
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+	name: dev
+	
+--- 
+
+apiVersion: v1
+kind: Pod
+metadata:
+	name: nginxpod
+	namespace: dev
+spec:
+	containers:
+		- name: nginx-containers
+			image: nginx:1.17.1
 ```
+
+- 创建：`kubectl create -f nginx-pod.yaml`，创建一个namespace和一个pod。
+- 删除：`kubectl delete -f nginx-pod.yaml`，删除namespace和一个pod。
+
+这种方式可以认为是`命令+yaml文件`
+
+#### （3）声明式对象配置
+
+通过**`apply`命令**和配置文件去操作k8s资源，这种方式仅用于新增和更新。
+
+- 首先执行`kubectl apply -f nginx-pod.yaml`，发现创建了资源。
+- 然后再次执行`kubectl apply -f nginx-pod.yaml`，**发现说资源没有变动**。如果我们修改yaml文件里面的内容，此时会提示已更新。
+
+总结：**当资源不存在时，`apply`命令相当于创建，等于`create`。如果资源存在，就更新，相当于`patch`**。
+
+#### （4）总结
+
+- 创建/更新资源，使用声明式对象配置，采用`kubectl apply -f XXX.yaml`
+- 删除资源，采用命令式对象配置，`kubectl delete -f XXX.yaml`
+- 查询资源，采用命令式对象管理，`kubectl get 资源名称`
+
+## 四、实战入门
+
+### 1. Namespace
+
+#### （1）作用
+
+主要作用是实现多套环境的资源隔离。 默认情况下，k8s中所有的pod是可以相互访问的，如果不想让两个pod相互访问，此时可以将它们放到两个Namespace中。
+
+<img src="assets/image-20230501215619689.png" alt="image-20230501215619689" style="zoom:60%;" />
+
+```bash
+# kubectl get ns                  
+NAME              STATUS   AGE
+default           Active   28d
+dev               Active   14m
+ingress-nginx     Active   26d
+kube-node-lease   Active   28d
+kube-public       Active   28d
+kube-system       Active   28d  # 所有集群组件会在这里
+```
+
+所有**未指定Namespace的对象都会被分配到default的Namespace中**。例如如果我们创建一个pod，没有指定namespace，那么它会自动分配给default，因此**每个pod都有namespace**。
+
+#### （2）查看Namespace
+
+```bash
+kubectl get ns default  # 查看命名空间
+kubectl describe ns default  # 描述命名空间
+```
+
+#### （3）创建Namespace
+
+```
+kubectl create ns default
+```
+
+#### （4）删除Namespace
+
+```
+kubectl delete ns default
+```
+
+### 2. Pod
+
+#### （1）作用 
+
+Pod是k8s进行管理的最小单元，**程序要运行必须部署在容器中，而容器必须部署在Pod中， Pod是一个或多个容器的组合**，这些容器共享存储、网络和命名空间，以及如何运行的规范。
+
+<img src="assets/image-20230501221054272.png" alt="image-20230501221054272" style="zoom:130%;" />
+
+k8s在集群启动之后，集群中的各个组件也是以pod方式运行的。
+
+```bash
+➜  # kubectl get pod -n kube-system
+NAME                               READY   STATUS    RESTARTS       AGE
+coredns-787d4945fb-46tj7           1/1     Running   12 (85m ago)   28d
+etcd-master                        1/1     Running   13 (85m ago)   28d
+kube-apiserver-master              1/1     Running   14             28d
+kube-controller-manager-master     1/1     Running   13 (85m ago)   28d
+kube-proxy-5xprh                   1/1     Running   13 (85m ago)   28d
+kube-scheduler-master              1/1     Running   12 (85m ago)   28d
+storage-provisioner                1/1     Running   23 (85m ago)   28d
+```
+
+可以看到第一节介绍的apiserver，controller-manager，scheduler等组件。
+
+#### （2）创建并运行pod
+
+k8s没有单独命令来单独运行pod的命令，都是通过pod控制器来实现的。# todo，后面把这里的意思补充一下。
+
+```bash
+# 前面介绍过，run是在集群中运行一个指定的镜像
+kubectl run nginx --image=nginx:1.17.1 --port=80 --namespace dev
+```
+
+#### （3）查看pod
+
+```bash
+kubectl get pods -n dev # 查看pod
+kubectl get pods -n dev -o wide # 查看pod更详细的信息
+kubectl describe pod nginxpod -n dev  # 描述信息,启动的时候如果有报错，可以通过这个命令看到
+```
+
+> 注意都要指定namespace，即加上`-n`参数 
+
+#### （4）访问pod
+
+一个正在跑的程序如果无法访问，是没有任何意义的。`kubectl get pods -n dev -o wide`可以拿到pod的ip地址
+
+```bash
+➜  # kubectl get pods -n dev -o wide     
+NAME       READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
+nginx      1/1     Running   0          12m   10.244.0.144   minikube   <none>           <none>
+nginxpod   1/1     Running   0          53m   10.244.0.143   minikube   <none>           <none>
+```
+
+访问的时候，可以通过`curl 10.244.0.144:80`来实现
+
+#### （5）删除pod
+
+```bash
+kubectl delete pod nginx -n dev
+```
+
+### 3. Label
+
+### 4. Deployment
+
+### 5. Service
+
+
+
 #### （2）常见操作
 
 - create: 创建。连续执行两次相同的create会报错。
@@ -316,8 +557,6 @@ auth   2/2     2            2           23h
 #### （3）资源对象
 
 Deployment、Service、Pod是k8s最核心的3个资源对象。
-<div align=center><img alt="#" width="1320" height="1096" src=pic/资源对象.png></div>
-
 - Pod: Pod是k8s进行管理的最小单元，**程序要运行必须部署在容器中，而容器必须部署在Pod中。** Pod是一个或多个容器的组合，这些容器共享存储、网络
 和命名空间，以及如何运行的规范。
 - Deployment: k8s中，Pod是最小的控制单元，**但是k8s很少直接控制Pod，一般都是通过Pod控制器来完成的**。Pod控制器用于pod的管理，确保pod资源
