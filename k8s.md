@@ -305,7 +305,7 @@ Pod可以提供服务之后，就要考虑如何访问Pod中服务，k8s提供�
 yaml语言是一个类似于json，xml的标记性语言。yaml语言需要注意以下几点:
 
 - 大小写敏感
-- 使用缩进表示层级关系，**缩进的空格数不重要，只要相同的层级的元素左对齐即可**
+- 使用缩进表示层级关系，**缩进的空格数不重要，只要相同的层级的元素左对齐即可**，注意不要使用tab键
 
 yaml支持以下几种数据类型：
 
@@ -322,15 +322,15 @@ yaml支持以下几种数据类型：
 - 对象：键值对的集合
 
   ```yaml
-  heima
-  	age: 15
-  	addr: Beijing
+  heima:
+    age: 15
+    addr: Beijing
   ```
 
 - 数组：一组按次序排列的值
 
-  ```
-  heima
+  ```yaml
+  heima:
   	age: 15
   	addr: 
   	   - Beijing
@@ -543,30 +543,236 @@ kubectl delete pod nginx -n dev
 
 ### 3. Label
 
+#### （1）作用
+
+在资源上添加标识，用来对资源进行区分和选择，方便我们对这些资源对象进行统一的操作，例如删除等。和Namespace不同的是，**不同的Namespace之间不能相互访问，但是不同的标签之间可以相互访问**。Label的特点：
+
+- 以键值对的形式附加到对象上，例如`"version":"release"`
+- 一个资源对象可以定义多个Label，一个Label可以被添加到任意数量的资源对象上
+
+#### （2）Label选择器
+
+标签定义完成后，还要考虑到标签的选择，可以用到Label Selector，k8s目前有两种Label Selector
+
+- 基于等式的：`name=slave`，选择所有`key=name`和`value=slave`的对象
+- 基于集合的：`name in (master, slave)`，选择所有`key=name`和`value=slave`或者`value=master`的对象。
+
+#### （3）新建Label
+
+```bash
+# pod ngingxpod，资源类型和资源名称
+# -n dev，哪个Namespace
+# version=1.0，标签名称
+kubectl label pod nginxpod -n dev version=1.0
+```
+
+#### （4）查看Label
+
+```bash
+➜  # kubectl get pod nginxpod -n dev --show-labels
+NAME       READY   STATUS    RESTARTS       AGE   LABELS
+nginxpod   1/1     Running   1 (7m6s ago)   12h   version=1.0
+```
+
+#### （5）更新Label
+
+```bash
+kubectl label pod nginxpod -n dev version=2.0 --overwrite
+```
+
+如果是新增一个key-value，直接用打标签的命令即可，不用加`--overwrite`
+
+```bash
+# 新增标签
+kubectl label pod nginxpod -n dev name=backend
+# 查看
+➜  # kubectl get pod nginxpod -n dev --show-labels 
+NAME       READY   STATUS    RESTARTS      AGE   LABELS
+nginxpod   1/1     Running   1 (11m ago)   12h   name=backend,version=2.0
+```
+
+#### （6）筛选Label
+
+```bash
+kubectl get pods -l "version=2.0" -n dev --show-labels
+```
+
+#### （7）删除Label
+
+```bash
+# 删除掉nginxpod这个pod的name标签
+kubectl label pod nginxpod -n dev name-
+```
+
 ### 4. Deployment
+
+#### （1）作用
+
+k8s中，Pod是最小的控制单元，**但是k8s很少直接控制Pod，一般都是通过Pod控制器来完成的**。Pod控制器用于pod的管理，确保pod资源符合预期(例如想要三个pod运行nginx服务)的状态，当pod资源出现故障时，会尝试进行重启或重建pod。
+
+k8s有多种Pod控制器，Deployment就是其中一种。
+
+![image-20230502130656640](assets/image-20230502130656640.png)
+
+#### （2）创建Deployment
+
+创建Deployment的命令实际上在前面已经有写过
+
+```bash
+# kubectl run deployment，这里的nginx其实是deployment名称
+# --image 指定pod的镜像
+# --replicas 指定副本数
+kubectl run nginx --image=nginx:1.17.1 --port=80 --replicas=3 -n dev
+```
+
+> 注意，有些时候需要写成 -- replicas=3，https://stackoverflow.com/a/67136382/10844937 
+
+在高版本的k8s中，不能用上述的方式，而需要用如下命令
+
+```bash
+kubectl create deployment nginx --image=nginx:1.17.1 --port=80 --replicas=3 -n dev
+```
+
+#### （3）查看Deployment
+
+```bash
+➜  # kubectl get deployment -n dev
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+nginx   3/3     3            3           2m21s
+```
+
+也可以一起看deployment和pod，更好理解这种关系
+
+```bash
+➜  # kubectl get deployment,pod -n dev
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx   3/3     3            3           3m17s
+
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/nginx-54c4864cd8-7jvfj   1/1     Running   0          3m17s
+pod/nginx-54c4864cd8-b4g56   1/1     Running   0          3m17s
+pod/nginx-54c4864cd8-wnfr4   1/1     Running   0          3m17s
+```
+
+查看deployment的详细信息
+
+```bash
+kubectl describe deployment nginx -n dev
+```
+
+在创建deployment的时候，**创建出来的三个pod其实是有相同的标签选择器**，见上图
+
+```bash
+➜  # kubectl get pods -n dev --show-labels
+NAME                     READY   STATUS    RESTARTS   AGE     LABELS
+nginx-54c4864cd8-7jvfj   1/1     Running   0          6m51s   app=nginx,pod-template-hash=54c4864cd8
+nginx-54c4864cd8-b4g56   1/1     Running   0          6m51s   app=nginx,pod-template-hash=54c4864cd8
+nginx-54c4864cd8-wnfr4   1/1     Running   0          6m51s   app=nginx,pod-template-hash=54c4864cd8
+```
+
+#### （4）删除Deployment
+
+```bash
+# deployment可以简写为deploy
+kubectl delete deploy nginx -n dev
+```
+
+删除deployment的时候，对应的pod也会被删除
+
+    #### （5）yaml文件创建Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: dev
+spec:  # 相当于命令行后面的--，额外参数
+  replicas: 3  # 副本数
+  selector:  # 选择器
+    matchLabels:
+      run: nginx
+  template:  # pod模板, 下面都是定义pod的一些参数
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx:1.17.1
+        name: nginx
+        ports:
+        - containerPort: 80
+          protocol: TCP
+```
+
+注意上面的template，这个是pod模板。采用`kubectl create -f nginxpod.yaml`即可创建Deployment。
 
 ### 5. Service
 
+#### （1）作用
 
+上面利用Deployment可以创建一组pod来提供高可用的服务，但是却存在如下问题
 
-#### （2）常见操作
+-  Pod IP会随着Pod的重建产生变化
+- Pod IP仅仅是集群内可见的虚拟IP，外部无法访问
 
-- create: 创建。连续执行两次相同的create会报错。
-- apply: 资源没有，就是创建。资源如果有，就是更新。如果yaml文件不变，它不会执行任何操作。
+针对这两个问题，k8s设计了Service来解决这个问题。Service是一组同类Pod**对外的访问接口**，借助Service，应用可以方便地实现服务发现和负载均衡。
 
-#### （3）资源对象
+<img src="assets/image-20230502205622864.png" alt="image-20230502205622864" style="zoom:67%;" />
 
-Deployment、Service、Pod是k8s最核心的3个资源对象。
-- Pod: Pod是k8s进行管理的最小单元，**程序要运行必须部署在容器中，而容器必须部署在Pod中。** Pod是一个或多个容器的组合，这些容器共享存储、网络
-和命名空间，以及如何运行的规范。
-- Deployment: k8s中，Pod是最小的控制单元，**但是k8s很少直接控制Pod，一般都是通过Pod控制器来完成的**。Pod控制器用于pod的管理，确保pod资源
-符合预期(例如想要三个pod运行nginx服务)的状态，当pod资源出现故障时，会尝试进行重启或重建pod。Deployment就是一种Pod控制器。
-- Service: 虽然每个Pod都会分配一个单独的Pod IP，但是会存在两个问题，1) Pod IP随着Pod的重建而产生变化 2) Pod IP仅仅是集群内可见的虚拟IP，
-外部无法访问。为了解决这个问题，k8s设计了Service来解决这个问题，Service通过标签选择器找到对应的Pod，请求过来后转发到对应的Pod。
-- Namespace: 默认情况下，k8s中所有的pod是可以相互访问的，如果不想让两个pod相互访问，此时可以将它们放到两个pod中
-- Label: 使用标签可以将具有相同属性的资源对象(例如都是属于后端的Pod或者Service)进行区分，方便我们对这些资源对象进行统一的操作，例如删除等。
+如上图所示，Deployment创建了三个Pod，当外部请求进来的时候，会到达Service，Service根据标签选择器，去选择对应的Pod来处理。
+
+#### （2）暴露Service
+
+```bash
+# port, Service监听的端口
+# target-port, 转发给Service的端口
+# type: ClusterIP, ip类型
+kubectl expose deployment nginx --name=svc-nginx1 --type=ClusterIP --port=80 --target-port=80 -n dev
+```
+
+这里是对nginx这个Deployment来进行Service暴露。另外`type=ClusterIP`，是只有集群内的机器可以访问，如果想要机器外的可以访问，需要设置为`type=NodePort`类型。
+
+```bash
+kubectl expose deployment nginx --name=svc-nginx2 --type=NodePort --port=80 --target-port=80 -n dev
+```
+
+#### （3）查看Service
+
+```bash
+➜  # kubectl get service -n dev
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+svc-nginx1   ClusterIP   10.99.53.1   <none>        80/TCP    3m50s
+svc-nginx2   NodePort    10.103.78.97 <none>        80:31667/TCP   12s
+```
+
+#### （4）访问Service
+
+集群内`type=ClusterIP`
+
+```bash
+curl 10.99.53.1:80
+```
+
+集群外`type=NodePort`
+
+```
+curl 10.103.78.97:31667
+```
 
 ## 三、pod详解
+
+### 1. pod介绍
+
+#### （1）pod结构
+
+每个Pod都可以包含一个或多个容器，这些容器分为两类
+
+- 用户程序所在的容器，数量可多可少
+
+<img src="assets/image-20230503085319866.png" alt="image-20230503085319866" style="zoom:67%;" />
+
+#### （2）pod定义
 
 ### 1. 一级属性
 
