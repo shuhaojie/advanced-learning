@@ -6,13 +6,82 @@
 
 MQ的全称是Message Queue，字面意思是消息队列。消息队列是在消息的传输过程中**保存消息的容器**，简单来说就是消息（数据）以“管道”的形式在两个应用之间传递。
 
-<img src="/Users/shuhaojie/Library/Application Support/typora-user-images/image-20230504162442782.png" alt="image-20230504162442782" style="zoom:67%;" />
+<img src="assets/image-20230504211139478.png" alt="image-20230504211139478" style="zoom:67%;" />
 
 ### 2. 什么是RabbitMQ？
 
+可以把RabbitMQ理解为类似于MySQL的一种软件，MySQL存储关系型数据，而RabbitMQ是用来管理消息的软件，它提供接口开发给用户，用户把消息发给消息队列或者从消息队列里去取消息。
+
+## 二、RabbitMQ工作模式
+
+### 1. 简单模式
+
+生产者
+
+- 连接rabbitmq
+- 创建队列
+- 向指定队列插入数据
+
+```python
+import pika
+
+# 1. 连接rabbitmq
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 2. 创建队列(声明队列), 如果队列不存在时才需要创建队列, 已经存在就不需要创建了
+channel.queue_declare(queue="hello")
+
+# 3. 往队列里插入数据
+channel.basic_publish(exchange='',  # 简单模式
+                      routing_key='hello',  # 指定队列
+                      body=b'Hello World!')
+print("[x] Sent 'Hello World!'")
+```
+
+消费者
+
+- 连接rabbitmq
+- 监听模式
+- 确定回调函数
+
+```python
+import pika
+
+# 1. 连接rabbitmq
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 注意，这里之所以也要去声明队列，是因为不确定publish那边是否创建了队列，因为有可能publish后执行，
+# 如果没有队列，后面监听的地方会报错
+channel.queue_declare(queue="hello")
+
+# 2. 确定回调函数
+def callback(ch, method, properties, body):
+    print("[x] Received %r" % body)
+
+# 3. 确定监听队列
+channel.basic_consume(queue='hello',
+                      auto_ack=True, # 默认应答
+                      on_message_callback=callback)
+
+print("[*] Waiting for messages. To exit press CTRL+C")
+# 启动监听, 如果队列里没有数据, 就会hang住。如果队列里有数据，会去执行回调函数
+channel.start_consuming()
+```
+
+注意
+
+1. 在消费者这边之所以也要去声明队列，是因为不确定publish那边是否创建了队列，因为有可能publish后执行，如果没有队列，后面监听的地方会报错。
+2. `start_consuming`启动监听, 如果队列里没有数据, 就会hang住。如果队列里有数据，会去执行回调函数，执行完回调之后会再次处于监听状态。
+
+### 2. 参数使用
 
 
-## 二、消息
+
+### 3. 交换机模式
+
+
 
 生产者并没有直接将消息发送给队列，而是通过交换机(Exchange)来作为队列和它之间的桥梁。交换机和队列之间通过routing_key来定义路由关系的。
 
