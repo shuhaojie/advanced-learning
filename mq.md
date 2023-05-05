@@ -75,7 +75,97 @@ channel.start_consuming()
 1. 在消费者这边之所以也要去声明队列，是因为不确定publish那边是否创建了队列，因为有可能publish后执行，如果没有队列，后面监听的地方会报错。
 2. `start_consuming`启动监听, 如果队列里没有数据, 就会hang住。如果队列里有数据，会去执行回调函数，执行完回调之后会再次处于监听状态。
 
-### 2. 交换机模式
+### 2. 参数使用
+
+#### （1）应答(auto_ack)
+
+前面消费者监听队列的时候，采用的是默认应答`auto_ack=True`。消费者从消息队列中取出一个消息的时候去做应答，此时消息队列里的消息会被取走(相当于删掉了)。这种方式可能会有一个问题，当消费者宕机，没有正确将消息给成功消费，重启后想再重新去消费已经不可能了。
+
+针对这种形式的不足，可以采取手动应答的方式`auto_ack=False`，当消费者将逻辑处理完成之后，再做出应答。
+
+- 将`basic_consume`自动应答改为手动应答
+- 在`callback`里做出应答
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+channel.queue_declare(queue="hello")
+
+
+def callback(ch, method, properties, body):
+    print("[x] Received %r" % body)
+    ch.basic_ack(delivery_tag=method.delivery_tag)  # 逻辑处理完之后，手动应答
+
+
+channel.basic_consume(queue='hello',
+                      auto_ack=False,  # 手动应答
+                      on_message_callback=callback)
+
+print("[*] Waiting for messages. To exit press CTRL+C")
+channel.start_consuming()
+```
+
+总结：
+
+- 默认应答效率更高，但是安全性差
+- 手动应答安全性好，但是效率较差
+
+#### （2）持久化(durable)
+
+当生产者将消息发布到消息队列里的时候，rabbitmq可能会崩掉，此时如果里面的消息还没有来得及被消费者消费，这条消息就相当于丢失了。此时需要考虑对消息进行持久化，共需要做两件事。
+
+- 持久化队列
+- 让消息持久化
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 创建持久化队列
+channel.queue_declare(queue="hello", durable=True)
+
+channel.basic_publish(exchange='',
+                      routing_key='hello',
+                      body=b'Hello World!',
+                      # 让消息持久化
+                      properties=pika.BasicProperties(
+                          delivery_mode=2,
+                      ))
+print("[x] Sent 'Hello World!'")
+```
+
+#### （3）分发参数
+
+消费者从消息队列中取消息消费时，默认的方式是轮询的机制。例如有2个消费者，生产者往消息队列里发了三条消息，那么第一个消费者会消费第1条和第3条消息，第二个消费者消费第2条消息。这种方式一个很大的弊端是，如果第一个消费者的性能很差，消费一个消息需要10s，第二个消费者性能很强，它把第2条消息消费完成后，就没事干了，只能干等着。针对这种情况，可以加上分发参数。
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+channel.queue_declare(queue="hello")
+
+def callback(ch, method, properties, body):
+    print("[x] Received %r" % body)
+
+# 公平分发
+channel.basic_qos(prefetch_count=1)
+
+channel.basic_consume(queue='hello',
+                      auto_ack=True, # 默认应答
+                      on_message_callback=callback)
+
+print("[*] Waiting for messages. To exit press CTRL+C")
+channel.start_consuming()
+```
+
+### 3. 交换机模式
 
 #### （1）发布订阅
 
@@ -150,18 +240,9 @@ print("[x] Sent 'Hello World!'")
 
 #### （2）关键字模式
 
-#### （3）通配符模式
+发布订阅模式有个弊端是，发布到交换机里的消息，会被所有订阅该交换机的消费者消费。但是有些场景我们并不想这样，例如往交换机里写日志，我们可能希望消费者1收所有类型(info, eror, warning)的日志，消费者2只收类型为error的日志。那么可以通过routing_key参数来定义要监听的关键字。
 
-### 3. 参数使用
-
-#### （1）应答(auto_ack)
-
-前面消费者监听队列的时候，采用的是默认应答`auto_ack=True`。消费者从消息队列中取出一个消息的时候去做应答，此时消息队列里的消息会被取走(相当于删掉了)。这种方式可能会有一个问题，当消费者宕机，没有正确将消息给成功消费，重启后想再重新去消费已经不可能了。
-
-针对这种形式的不足，可以采取手动应答的方式`auto_ack=False`，当消费者将逻辑处理完成之后，再做出应答。
-
-- 将`basic_consume`自动应答改为手动应答
-- 在`callback`里做出应答
+- 生产者：发布消息时，指定关键字。
 
 ```python
 import pika
@@ -169,54 +250,51 @@ import pika
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 
-channel.queue_declare(queue="hello")
+
+channel.exchange_declare(exchange="logs",
+                         # 类型要改为direct
+                         exchange_type="direct")
+
+channel.basic_publish(
+    exchange='logs',
+    # 指定关键字routing_key
+    routing_key='info',
+    body=b'Info: Hello World!')
+
+print("[x] Sent 'Hello World!'")
+```
+
+- 消费者：绑定到交换机上时，指定要监听的关键字。只消费交换机里关键字的消息，其他消息不消费。
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+channel.exchange_declare(exchange="logs",
+                         # 类型要改为direct
+                         exchange_type="direct")
+
+result = channel.queue_declare("", exclusive=True)
+queue_name = result.method.queue
+
+channel.queue_bind(
+    exchange='logs',
+    queue=queue_name,
+    # 确定要监听的关键字
+    routing_key='info'
+)
 
 
 def callback(ch, method, properties, body):
     print("[x] Received %r" % body)
-    ch.basic_ack(delivery_tag=method.delivery_tag)  # 逻辑处理完之后，手动应答
 
 
-channel.basic_consume(queue='hello',
-                      auto_ack=False,  # 手动应答
-                      on_message_callback=callback)
-
+channel.basic_consume(queue=queue_name, auto_ack=True, on_message_callback=callback)
 print("[*] Waiting for messages. To exit press CTRL+C")
 channel.start_consuming()
 ```
-
-总结：
-
-- 默认应答效率更高，但是安全性差
-- 手动应答安全性好，但是效率较差
-
-#### （2）持久化(durable)
-
-当生产者将消息发布到消息队列里的时候，rabbitmq可能会崩掉，此时如果里面的消息还没有来得及被消费者消费，这条消息就相当于丢失了。此时需要考虑对消息进行持久化，共需要做两件事。
-
-- 持久化队列
-- 让消息持久化
-
-```python
-import pika
-
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
-
-# 创建持久化队列
-channel.queue_declare(queue="hello", durable=True)
-
-channel.basic_publish(exchange='',
-                      routing_key='hello',
-                      body=b'Hello World!',
-                      # 让消息持久化
-                      properties=pika.BasicProperties(
-                          delivery_mode=2,
-                      ))
-print("[x] Sent 'Hello World!'")
-```
-
-#### （3）分发参数
 
 ## 三、pika
 
