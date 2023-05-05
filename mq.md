@@ -16,7 +16,7 @@ MQ的全称是Message Queue，字面意思是消息队列。消息队列是在�
 
 ### 1. 简单模式
 
-生产者
+#### （1）生产者
 
 - 连接rabbitmq
 - 创建队列
@@ -39,10 +39,10 @@ channel.basic_publish(exchange='',  # 简单模式
 print("[x] Sent 'Hello World!'")
 ```
 
-消费者
+#### （2）消费者
 
 - 连接rabbitmq
-- 监听模式
+- 监听队列
 - 确定回调函数
 
 ```python
@@ -75,34 +75,148 @@ channel.start_consuming()
 1. 在消费者这边之所以也要去声明队列，是因为不确定publish那边是否创建了队列，因为有可能publish后执行，如果没有队列，后面监听的地方会报错。
 2. `start_consuming`启动监听, 如果队列里没有数据, 就会hang住。如果队列里有数据，会去执行回调函数，执行完回调之后会再次处于监听状态。
 
-### 2. 参数使用
+### 2. 交换机模式
 
+#### （1）发布订阅
 
+发布订阅模式相比于简单模式多了一个交换机，在这种模式下，生产者创建交换机，消费者创建队列。生产者往交换机里发布消息时，每个订阅的队列都会收到消息，就像订阅报纸一样，人手一份。
 
-### 3. 交换机模式
+<img src="./assets/image-20230505134437716.png" alt="image-20230505134437716" style="zoom:67%;" />
 
+生产者
 
+- 连接mq
+- 创建交换机（而不是之前创建队列）
+- 往交换机里插入数据
 
-生产者并没有直接将消息发送给队列，而是通过交换机(Exchange)来作为队列和它之间的桥梁。交换机和队列之间通过routing_key来定义路由关系的。
-
-因此可以指定exchange为空字符串，routing_key的名称为想将消息定向到的队列的名称。此外，指定`delivery_mode`为`PERSISTENT_DELIVERY_MODE`，来保证消息的持久化。
 ```python
+import pika
+
+# 1. 连接rabbitmq
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 2. 声明交换机
+channel.exchange_declare(
+    # 交换机名称
+    exchange="logs",
+    # 交换机模式：发布订阅模式
+    exchange_type="fanout"
+)
+
+# 3. 往交换机里插入数据
 channel.basic_publish(
-    exchange="",
-    routing_key="video",
-    body=json.dumps(message),
-    properties=pika.BasicProperties(
-        delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE
-    ),
-)
+    # 往logs交换机插入数据
+    exchange='logs',
+    # 不涉及队列，置空
+    routing_key='',
+    body=b'Hello World!')
+
+print("[x] Sent 'Hello World!'")
 ```
 
-在消费的时候，指定queue
+消费者
+
+- 连接mq
+- **创建队列**，生产者不再创建队列
+- 将队列绑定到交换机
+- 确定回调函数，监听
+
 ```python
-channel.basic_consume(
-    queue="video", on_message_callback=callback
+import pika
+
+# 1. 连接rabbitmq
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 2. 声明交换机
+channel.exchange_declare(
+    # 交换机名称
+    exchange="logs",
+    # 交换机模式：发布订阅模式
+    exchange_type="fanout"
 )
+
+# 3. 往交换机里插入数据
+channel.basic_publish(
+    # 往logs交换机插入数据
+    exchange='logs',
+    # 不涉及队列，置空
+    routing_key='',
+    body=b'Hello World!')
+
+print("[x] Sent 'Hello World!'")
 ```
+
+#### （2）关键字模式
+
+#### （3）通配符模式
+
+### 3. 参数使用
+
+#### （1）应答(auto_ack)
+
+前面消费者监听队列的时候，采用的是默认应答`auto_ack=True`。消费者从消息队列中取出一个消息的时候去做应答，此时消息队列里的消息会被取走(相当于删掉了)。这种方式可能会有一个问题，当消费者宕机，没有正确将消息给成功消费，重启后想再重新去消费已经不可能了。
+
+针对这种形式的不足，可以采取手动应答的方式`auto_ack=False`，当消费者将逻辑处理完成之后，再做出应答。
+
+- 将`basic_consume`自动应答改为手动应答
+- 在`callback`里做出应答
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+channel.queue_declare(queue="hello")
+
+
+def callback(ch, method, properties, body):
+    print("[x] Received %r" % body)
+    ch.basic_ack(delivery_tag=method.delivery_tag)  # 逻辑处理完之后，手动应答
+
+
+channel.basic_consume(queue='hello',
+                      auto_ack=False,  # 手动应答
+                      on_message_callback=callback)
+
+print("[*] Waiting for messages. To exit press CTRL+C")
+channel.start_consuming()
+```
+
+总结：
+
+- 默认应答效率更高，但是安全性差
+- 手动应答安全性好，但是效率较差
+
+#### （2）持久化(durable)
+
+当生产者将消息发布到消息队列里的时候，rabbitmq可能会崩掉，此时如果里面的消息还没有来得及被消费者消费，这条消息就相当于丢失了。此时需要考虑对消息进行持久化，共需要做两件事。
+
+- 持久化队列
+- 让消息持久化
+
+```python
+import pika
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+
+# 创建持久化队列
+channel.queue_declare(queue="hello", durable=True)
+
+channel.basic_publish(exchange='',
+                      routing_key='hello',
+                      body=b'Hello World!',
+                      # 让消息持久化
+                      properties=pika.BasicProperties(
+                          delivery_mode=2,
+                      ))
+print("[x] Sent 'Hello World!'")
+```
+
+#### （3）分发参数
 
 ## 三、pika
 
