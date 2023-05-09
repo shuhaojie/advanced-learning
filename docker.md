@@ -150,7 +150,13 @@ docker利用的正是container来运行程序
 
 ### 3. 仓库
 
+#### （1）基本概念
+
 docker的registry和git概念一样, 可以从registry上传或下载images.
+
+#### （2）常用命令
+
+- docker push：将本地的镜像上传到镜像仓库
 
 ## 三、Dockerfile
 

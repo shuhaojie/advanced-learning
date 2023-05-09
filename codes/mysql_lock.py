@@ -31,7 +31,7 @@ def update_func():
 
 def insert_func():
     conn.begin()
-    cur.execute("SELECT max(queue) from job")
+    cur.execute("SELECT max(queue) from job for update")
     max_queue = cur.fetchone()[0]
     job_id, queue = str(uuid.uuid1()), max_queue + 1
     cur.execute("INSERT INTO job VALUES(%s,%s)", (job_id, queue))
