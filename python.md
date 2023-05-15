@@ -2,161 +2,268 @@
 
 ## 一、 正则
 
-### 1. 基本字符
+### 1. 字符
 
-正则表达式是用来匹配**字符串的**
+正则表达式是用来匹配**字符串的**。
+
+ `re.search`返回第一个匹配，此外还会返回匹配的字符索引范围。
+
+```python
+res = re.search(r'def', 'abcdefghijklmn')
+print(res)  # <re.Match object; span=(3, 6), match='def'>, 表示匹配成功, 并且匹配的字符索引范围是(3,6)
+print(res[0]) # def
+```
+
+#### （1）`.`
+
+`.`：匹配除了换行符`\n`之外的任意字符
+
+```python
+re.search(r'...', '_*_') # <re.Match object; span=(0, 3), match='_*_'>
+```
+
+#### （2）`\`
+
+转义字符，使后一个字符改变原来的意思。对于一些特殊字符，例如`.`,`\`等在匹配的时候，可以使用转义字符
+
+```python
+re.search(r'a\.c', 'a.c') # <re.Match object; span=(0, 3), match='a.c'>
+re.search(r'a\\c', 'a\c') # <re.Match object; span=(0, 3), match='a\\c'>
+```
+
+####  （3）`[]`
+
+- `[...]`: 匹配字符集，只要出现在[]里的规划内容，都算符合匹配规则
+  - `[aeiou]`:匹配aeiou字符
+  - `[a-z]`: 匹配小写字母
+  - `[A-Z]`:匹配大写字母
+  - `[0-9]`: 匹配任何数字
+
+````python
+re.match(r'[0-9a-zA-Z_]', 'Z')  # 由于Z出现在[]里，匹配成功
+````
+
+- `[^...]`: 出现在[^]里的规划内容，都不符合匹配规则
+  - `[^aeiou]`:匹配非aeiou字符
+  - `[^a-z]`:匹配非小写字母
+  - `[^A-Z]`:匹配非大写字母
+  - `[0-9]`: 匹配非数字
+
+```python
+re.match(r'[^0-9a-zA-Z_]', 'Z')  # 由于Z出现在[]里，匹配失败
+```
+
+### 2. 预定义字符集
 
 #### （1）`\d`
 
 `\d`：匹配一个数字
 
+`\D`: 匹配任何一个非数字
+
+```python
+re.search(r'\d\dabc', '.*abc') # 匹配失败
+re.search(r'\D\Dabc', '.*abc') # <re.Match object; span=(0, 5), match='.*abc'>
+```
+
 #### （2）`\w`
 
-`\w`：匹配一个字母或数字
+`\w`：匹配一个字母，数字，下划线
 
-#### （3）`\.`
+`\W`：匹配任何非字母、数字、下划线
 
-`\.`：匹配任意字符
+```python
+re.search(r'\w\wabc', '_1abc') # <re.Match object; span=(0, 5), match='_1abc'>
+re.search(r'\W\Wabc', '_1abc') # 匹配失败
+```
 
-#### （4）`\s`
+#### （3）`\s` 
 
 `\s`：匹配空格
 
-```python
-import re
+`\S`：匹配非空格
 
-re.match(r'00\d', '007')  # 匹配成功
-re.match(r'00\d', '00A')  # 匹配失败
-re.match(r'00\w', '00A')  # 匹配失败
-re.match(r'00.', '00A')  # 匹配成功
+```python
+re.search(r'a\sc', 'a c') # <re.Match object; span=(0, 3), match='a c'>
+re.search(r'abc', 'a c') # 匹配失败
 ```
 
-### 2. 不定长字符
+### 3. 边界上的匹配
 
-要匹配不定长的字符，可以采用如下形式：
+#### （1）`^`
+
+`^`：匹配字符串的起始点
+
+```python
+re.search(r'^a', 'abcd')  # <re.Match object; span=(0, 1), match='a'>
+```
+
+#### （2）`$`
+
+`$`：匹配字符串的最后面
+
+```python
+re.search(r'c$', 'abc') # <re.Match object; span=(2, 3), match='c'>
+```
+
+#### （3）`\A`
+
+`\A`：匹配字符串的起始点
+
+```python
+re.search(r'\Aa', 'abc')  # <re.Match object; span=(0, 1), match='a'>
+```
+
+#### （4）`\Z`
+
+`\Z`：匹配字符串的最后面
+
+```python
+re.search(r'c\Z', 'abc')  # <re.Match object; span=(2, 3), match='c'>
+```
+
+#### （5）`\B`
+
+`\B`：匹配除了字符串最后面的其他位置
+
+```python
+re.search(r'ful\B', 'colorful') # 匹配失败
+```
+
+### 4. 数量上的匹配
+
+这几个都是对**前一个字符**进行数量上的匹配
 
 #### （1）`*`
 
-`*`表示任意个字符(包括0个)
+`*`：匹配前一个字符0次或无限次。例如`abc*`可以匹配`abccc`或者`ab`
+
+```python
+re.search("Go*d", "Goooooood") # <re.Match object; span=(0, 9), match='Goooooood'>
+re.search("G*d", "Goooooood") # <re.Match object; span=(8, 9), match='d'>
+```
+
+第一个例子，会将o字母匹配7次
+
+**第二个例子，会将G字母匹配0次**
 
 #### （2）`+`
 
-`+`表示至少一个字符
+`+`：匹配前一个字符1次或无限次。例如`abc+`可以匹配`abccc`或者`abc`
+
+```python
+re.search("Go+d", "Goooooood") # <re.Match object; span=(0, 9), match='Goooooood'>
+re.search("G+d", "Goooooood") # 匹配失败
+```
 
 #### （3）`?`
 
-`?`表示0个或1个字符
+`?`：匹配前一个字符0次或1次。例如`abc+`可以匹配`ab`或者`abc`
+
+```python
+re.search(r'abc?', 'ab')  # <re.Match object; span=(0, 2), match='ab'>
+re.search(r'abc?d', 'abcd')  # <re.Match object; span=(0, 4), match='abcd'>
+```
 
 #### （4）`{n}`
 
-`{n}`表示n个字符
-
-#### （5）`{n, m}`
-
-`{n,m}`表示n-m个字符
+`{n}`：匹配前一个字符n次
 
 ```python
-import re
-
-# 1. \d{3}表示匹配3个数字，例如'010'；
-# 2. \s可以匹配一个空格，所以\s+表示至少有一个空格，例如匹配' '等；
-# 3. \d{3,8}表示3-8个数字，例如'1234567'。
-re.match(r'\d{3}\s+\d{3,8}', '003 2134')  # 匹配成功
+re.search("Go{7}d", "Goooooood") # <re.Match object; span=(0, 9), match='Goooooood'>
 ```
 
-### 3. 精准匹配`[]`
+#### （5）`{n,}`
 
-更精确地匹配，可以用`[]`表示范围，`[]`表示范围内的
-
-````python
-import re
-
-# 匹配一个数字、字母(不论大小写)或者下划线
-# 注意1: \_可以不要\
-# 注意2: a-z不能写成a-Z，否则报错
-re.match(r'[0-9a-zA-Z\_]', 'Z')  # 匹配成功
-# 匹配至少由一个数字、字母(不论大小写)或者下划线组成的字符串
-re.match(r'[0-9a-zA-Z\_]+', 'Z*')  # 匹配成功
-````
-
-### 4. 其他匹配符
-
-#### （1）`|` 
-
-`｜`: 表示或，`A|B`表示匹配A或B
+`{n}`：匹配前一个字符n次或n次以上
 
 ```python
-import re
-
-re.match(r'P|python', 'python')  # 匹配成功
+re.search("Go{2,}d", "Goooooood") # <re.Match object; span=(0, 9), match='Goooooood'>
 ```
 
-#### （2）`^`
+#### （6）`{n, m}`
 
-`^`：表示行的开头
+`{n,m}`：匹配前一个字符n到m次
 
 ```python
-import re
-re.match(r'^\d{3}\-\d{3,8}', '010-12345')
+re.search(r'\d{3}\s+\d{3,8}', '003 2134')  # <re.Match object; span=(0, 8), match='003 2134'>
 ```
 
-#### （3）`$`
+### 5. 逻辑与分组
 
-`$`：表示行的结尾。例如`^py$`，整行匹配，只能匹配`'py'`
+#### （1）`|`  
 
-```
-import re
-re.match(r'^py$', 'py')
-```
-
-### 5. 分组`()`
-
-#### （1）基本分组
-
-除了简单地判断是否匹配之外，正则表达式还有提取子串的强大功能。用`()`表示的就是要提取的分组（Group）。比如：
+`｜`: 左右表达式任意匹配一个。如果`|` 没有出现在`()`中，它的匹配范围是整个表达式。
 
 ```python
-import re
-m = re.match(r'^(\d{3})-(\d{3,8})$', '010-12345')
-m.group(0) # '010-12345'
-m.group(1) # '010'
-m.group(2) # '12345'
-m.groups() # ('010', '12345')
+re.match(r'P|python', 'python')  # <re.Match object; span=(0, 6), match='python'>
+re.match(r'P|python', 'Python')  # <re.Match object; span=(0, 1), match='P'>, 因为进行全文匹配
+re.match(r'(P|p)ython', 'Python')  # <re.Match object; span=(0, 6), match='Python'>
 ```
 
-`group(0)`永远是与整个正则表达式相匹配的字符串，`group(1)`、`group(2)`……表示第1、2、……个子串。
+#### （2）`()`
 
-#### （2）组名
+- 以整个括号内的字符为一个单位
 
-`(?P<name>exp)` : 定义一个命名分组，分组的正则是exp
+```python
+re.search('(abc)*d', 'abcabcd') # <re.Match object; span=(0, 7), match='abcabcd'>
+re.search('a(123|456)c', 'a456c')  # <re.Match object; span=(0, 5), match='a456c'>
+```
+
+- `(?P<name>exp)` : 对分组进行命名
+
+```python
+res = re.search('(?P<name>abc){2}d', 'abcabcd')
+res[0] # abcabcd
+res.group('name')  # 'abc'
+```
+
+注意**只需要关注命名的后面部分即可, 前面部分并没有实际意义, 只是用来命名而已**。
+
+- `(?P=name)`：引用别名为`<name>`的分组匹配到的字符串。
+
+```python
+re.search('(?P<id1>\d)abc(?P=id1)', '6abc6')  # <re.Match object; span=(0, 5), match='6abc6'>
+re.search('(?P<id2>\d)abc(?P=id2)', '2abc6')  # 匹配失败
+```
+
+实际案例
 
 ```python
 import re
 
 s = re.compile(fr'(?P<F_100375>^[一二三四五六七八九十零]+[、\.\s]+.*)', )
 c = s.match('一、项目概况')
-print(c.group('F_100375'))  # 一、项目概况
+c.group('F_100375')  # 一、项目概况
 ```
 
-
+最后的`.*`匹配任意字符
 
 ### 6. 贪婪匹配
 
 正则匹配默认是贪婪匹配，也就是匹配尽可能多的字符
 
 ```python
-import re
 re.match(r'^(\d+)(0*)$', '102300').groups()  # ('102300', '')
 ```
 
-由于前面的`\d+`会贪婪匹配，把所有的数字都匹配到，此时后面的`(0*)`就匹配不到东西了，也就是一个空字符串。此时可以采用非贪婪匹配，**可以加个`?`让`\d+`采用非贪婪匹配**
+`\d+`会贪婪匹配，把所有的数字都匹配到，此时后面的`(0*)代表的是0个0。
 
 ```python
-import re
 re.match(r'^(\d+?)(0*)$', '102300').groups()
 ```
 
-### 7. re.compile
+### 7. 字符组合
+
+#### （1）`\d+`
+
+由前面的知识知道，`\d`匹配的是一个数字，`+`：匹配前一个字符1次或无限次。
+
+#### （2）`.*`
+
+bbb
+
+### 8. re.compile
 
 当我们在Python中使用正则表达式时，`re`模块内部会干两件事情：
 
@@ -172,7 +279,7 @@ re_telephone.match('010-12345').groups() # ('010', '12345')
 re_telephone.match('010-8086').groups() # ('010', '8086')
 ```
 
-### 8. re.findall
+### 9. re.findall
 
 以列表的形式返回能匹配的子串。
 
@@ -208,11 +315,11 @@ domain_names = re.findall(pattern, s2)
 print(domain_names)
 ```
 
-### 9. re.search
+### 10. re.search
 
 扫描整个字符串并返回第一个成功的匹配，如果没有匹配，就返回一个None
 
-### 10. re.sub
+### 11. re.sub
 
 将匹配到的数据进⾏替换
 
