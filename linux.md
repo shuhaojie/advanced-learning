@@ -151,11 +151,24 @@ wc [-c -m -l -w] 文件路径
 
 #### （3）管道符(重点)
 
+管道符｜作用：将管道符左边命令的结果，作为右边命令的输入
 
+<img src="./assets/image-20230522095234080.png" alt="image-20230522095234080" style="zoom:70%;" />
 
+任意只要能输出结果的都可以用管道符，管道符右边也可以用`wc`。例如可以通过下面的命令来统计路径下子文件的个数
 
+```bash
+[haojie@localhost ~]$ ls -l ~/workspace | wc -l
+      10
+```
 
+此外任意的输出都可以使用`grep`来做过滤
 
+```bash
+[haojie@localhost ~]$ docker stack services idps-product-metal | grep predict
+qtufjz1qkgl6   idps-product-metal_chapter_locating_predict             replicated   1/1        dockerhub.datagrand.com/idps/chapter_locating:release_ci_20221117_3ce18f3
+nf4brcv01fxp   idps-product-metal_diff_extract_predict                 replicated   1/1        dockerhub.datagrand.com/idps/diff_extract:release_ci_20221117_360dd4d
+```
 
 
 
