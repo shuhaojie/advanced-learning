@@ -99,13 +99,14 @@ find 起始路径 -name "被查找文件名"
 
 - 按照文件大小查找
 
-```
+```bash
+# +，-表示大于和小于
+# n表示大小数字
+# kMG表示大小单位，k表示kb，M表示MB，G表示GB
 find 起始路径 -size +|-n[kMG]
 ```
 
-- +，-表示大于和小于
-- n表示大小数字
-- kMG表示大小单位，k表示kb，M表示MB，G表示GB
+例如
 
 ```
 find / size -10k # 查找小于10k的文件
@@ -149,7 +150,7 @@ wc [-c -m -l -w] 文件路径
   2  20 110 test.txt  # 2表示行数，20表示单词数，110表示字节数
 ```
 
-#### （3）管道符(重点)
+#### （3）管道符(｜)
 
 管道符｜作用：将管道符左边命令的结果，作为右边命令的输入
 
@@ -169,6 +170,120 @@ wc [-c -m -l -w] 文件路径
 qtufjz1qkgl6   idps-product-metal_chapter_locating_predict             replicated   1/1        dockerhub.datagrand.com/idps/chapter_locating:release_ci_20221117_3ce18f3
 nf4brcv01fxp   idps-product-metal_diff_extract_predict                 replicated   1/1        dockerhub.datagrand.com/idps/diff_extract:release_ci_20221117_360dd4d
 ```
+
+### 8. echo, tail, 重定向符
+
+#### （1）echo
+
+输出制定内容，和print的功能类似
+
+```bash
+echo 要输出的内容
+```
+
+例如
+
+```bash
+echo Hello World. # 打印Hello World.
+```
+
+#### （2）反引号(``)
+
+被反引号包围的内容，会被作为命令执行
+
+```bash
+echo pwd # 打印Hello World.
+echo `pwd` # 打印/Users/shuhaojie
+```
+
+#### （3）重定向符(>,>>)
+
+- `>`：将左边命令的结果，覆盖写入到符号右侧的文件中
+- `>>`：将左边命令的结果，追加写入到符号右侧的文件中
+
+```bash
+echo "Hello World" > hello.txt # 覆盖
+echo "Hello World" >> hello.txt # 追加
+ls > hello.txt # 将ls的内容覆盖写入到文件中
+```
+
+#### （4）tail
+
+查看文件尾部的内容，追踪文件的最新修改
+
+```bash
+# -f: 持续跟踪
+# -num: 查看尾部多少行, 不指定默认10行
+tail [-f -num] linux路径
+```
+
+### 9. vi编辑器
+
+命令模式快捷键
+
+```bash
+0: 移动光标到当前行的开头
+$(shift+4): 移动光标到当前行的结尾
+yy: 复制当前行
+p: 粘贴复制的内容
+u: 撤销修改
+gg: 跳到首行
+G: 跳到尾行
+```
+
+底线模式快捷键
+
+```
+:set nu
+```
+
+## 二、linux用户
+
+### 1. root用户
+
+- `su`: switch user，切换用户。不仅仅可以切换到root用户，也可以切换到其他用户。
+
+### 2. 用户和用户组
+
+一个用户可以在多个组，一个组可以有多个用户
+
+#### （1）用户组
+
+```bash
+groupadd 用户组 # 创建用户组
+```
+
+#### （2）用户
+
+- 创建用户
+
+```bash
+# -g 表示加入哪个用户组，不指定的话，会自动加入同名用户组
+# -d 创建home路径
+useradd [-g -d]用户名
+```
+
+- 删除用户
+
+```bash
+# -r 删除home路径
+userdel [-r] 用户名
+```
+
+- 查看用户
+
+```bash
+# 不指定表示查看自己
+id [用户名]
+```
+
+- 修改用户所在组
+
+```
+usermod -aG 用户组 用户名
+```
+
+### 3. 权限
 
 
 
