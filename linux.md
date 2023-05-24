@@ -285,15 +285,77 @@ usermod -aG 用户组 用户名
 
 ### 3. 权限
 
+通过ls -l命令可以看到如下内容
+
+```bash
+[haojie@localhost ~]$ ls -l
+total 8
+drwx------@  3 shuhaojie  staff    96  4 20 11:42 Applications
+drwxr-xr-x   3 shuhaojie  staff    96  4 26 15:54 DataGripProjects
+drwx------@  7 shuhaojie  staff   224  5 23 13:40 Desktop
+drwx------+  9 shuhaojie  staff   288  5 23 20:01 Documents
+drwx------@ 51 shuhaojie  staff  1632  5 22 18:42 Downloads
+drwx------@ 88 shuhaojie  staff  2816  5 22 16:01 Library
+```
+
+- 第一列表示文件、文件夹的权限信息
+- 第三列表示文件、文件夹所属用户
+- 第四列表示文件、文件夹所属用户组
+
+#### （1）权限信息
+
+权限细节共分为10个槽位
+
+<img src="./assets/image-20230524093259478.png" alt="image-20230524093259478" style="zoom:50%;" />
 
 
 
+例如`drwxr-xr-x`表达的意思为
 
+- d:这是一个文件夹
+- rwx:所属用户可读、可写、可执行
+- r-x：所属用户组可读、不可写、可执行
+- r-x：其他用户组可读、不可写、可执行
 
+#### （2）rwx
 
+- r：针对文件，可以查看文件内容；针对文件夹，可以查看文件夹内容，例如ls
+- w：针对文件，表示可以修改此文件；针对文件夹，可以在文件夹内创建、删除、改名等操作。
+- x：针对文件，表示可以将文件作为程序执行；针对文件夹，**表示可以更改工作目录到此文件夹，即`cd`命令**。
 
+### 4. chmod命令
 
+```bash
+# -R，修改文件夹时，文件夹内的全部内容也应用同样的操作
+chmod [-R] 权限 文件或文件夹
+```
 
+注意：**只有文件或文件夹所属用户，或者root用户才能修改权限**
+
+### 5. chown命令
+
+chown：修改文件或文件夹的所属用户、用户组。
+
+```bash
+# -R，同chmod
+# :用于分割用户或者用户组
+chown [-R] [用户][:][用户组] 文件或文件夹
+```
+
+注意：**只有root用户才能修改**
+
+```bash
+chown root hello.txt  # 文件所属用户修改为root
+chown :root hello.txt # 文件所属用户组修改为root
+```
+
+### 三、小技巧快捷键
+
+- ctrl+d: 退出某些程序的专属页面，例如mysql或者python
+- history：查看历史命令
+- ctrl+r：通过关键字搜索命令
+
+​	<img src="./assets/image-20230524100454944.png" alt="image-20230524100454944" style="zoom:50%;" /> 
 
 
 
