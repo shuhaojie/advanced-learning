@@ -349,7 +349,9 @@ chown root hello.txt  # 文件所属用户修改为root
 chown :root hello.txt # 文件所属用户组修改为root
 ```
 
-### 三、小技巧快捷键
+## 三、linux软件
+
+### 1. 小技巧快捷键
 
 - ctrl+d: 退出某些程序的专属页面，例如mysql或者python
 - history：查看历史命令
@@ -357,5 +359,45 @@ chown :root hello.txt # 文件所属用户组修改为root
 
 ​	<img src="./assets/image-20230524100454944.png" alt="image-20230524100454944" style="zoom:50%;" /> 
 
+- ctrl+a：跳到命令开头
+- ctrl+e：跳到命令结尾
+- ctrl+键盘左键：左跳一个单词
+- ctrl+键盘右键：右跳一个单词
+- ctrl+l：清屏，等于clear
 
+### 2. 软件安装
+
+```bash
+# -y: 自动确认, 无需手动确认或卸载过程
+yum [-y] [install | remove | search] 软件名称
+```
+
+注意：
+
+- yum需要root用户权限
+- yum需要联网
+
+### 3. systemctl命令
+
+Linux系统很多软件（内置或第三方）均支持使用systemnctl命令控制：启动、停止、开机自启。**能够被systemctl管理的软件，一般也称之为：服务。**
+
+```bash
+systemctl start ｜ stop ｜ status ｜ enable ｜ disable 服务名
+```
+
+- start启动 
+
+- stop 关闭
+
+- status：查看状态
+
+- enable：开启开机自启
+- disable 关闭开机自启
+
+系统内置的服务比较多，比如：
+
+- NetworkManager，主网络服务
+- network，副网络服务
+- firewalld，防火墙服务
+- sshd，ssh服务（FinalShell远程登录Linux使用的就是这个服务） 
 
