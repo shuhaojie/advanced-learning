@@ -401,3 +401,385 @@ systemctl start ｜ stop ｜ status ｜ enable ｜ disable 服务名
 - firewalld，防火墙服务
 - sshd，ssh服务（FinalShell远程登录Linux使用的就是这个服务） 
 
+### 4. 软链接
+
+```bash
+# 参数1: 被链接的文件或文件夹
+# 参数2: 要链接去的目的地
+ln -s 参数1 参数2 
+```
+
+### 5. 日期和地区
+
+```
+date [-d] [格式化字符串] 
+```
+
+ntp程序可以自动校准系统时间
+
+```bash
+yum -y install ntp
+systemctl start ntp
+systemctl enable ntp
+```
+
+## 四、网络
+
+### 1. ip地址和主机名
+
+#### （1）特殊ip地址
+
+- 127.0.0.1：本机ip
+- 0.0.0.0：既可以代表本机ip，又可以代表表示所有ip
+
+#### （2）查看ip
+
+```bash
+[haojie@master ~]$ ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.0.4.11  netmask 255.255.252.0  broadcast 10.0.7.255
+        inet6 fe80::5054:ff:fefe:3906  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:fe:39:06  txqueuelen 1000  (Ethernet)
+        RX packets 14680852  bytes 4330773676 (4.0 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 13105971  bytes 2528117760 (2.3 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 2756  bytes 147498 (144.0 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2756  bytes 147498 (144.0 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+#### （3）主机名
+
+```bash
+[haojie@master ~]$ hostname
+master
+```
+
+#### （4）域名解析
+
+![image-20230527101040796](assets/image-20230527101040796.png)
+
+我们访问www.baidu.com，它的流程如下
+
+1. 先查看本机是否有该域名的记录，`etc/hosts`
+2. 如果第一步没有，再联网去DNS服务器(114.114.114，8.8.8.8)询问
+
+### 2. 网络请求
+
+#### （1）ping
+
+检查指定的网络服务器是否连通
+
+```bash
+ping [-c num] ip或主机名
+```
+
+#### （2）wget
+
+在命令行内下载网络文件
+
+```bash
+# -b 表示后台下载
+wget [-b] url
+```
+
+#### （3）curl
+
+ curl可以发送http网络请求，可用于下载文件、获取信息等
+
+```bash
+# -O用于下载文件
+curl [-O] url
+```
+
+例如向cip.cc网站发送get请求
+
+```bash
+[haojie@master ~]$ curl cip.cc
+IP	: 123.118.73.58
+地址	: 中国  北京
+运营商	: 联通
+
+数据二	: 北京市 | 联通
+
+数据三	: 中国北京北京市 | 联通
+
+URL	: http://www.cip.cc/123.118.73.58
+```
+
+### 3. 端口
+
+#### （1）端口的定义
+
+端口是设备与外界通讯交流的出入口，端口分为物理端口和虚拟端口
+
+- 物理端口：USB接口，HDMI接口
+- 虚拟端口：计算机内部的接口，是操作系统和外部进行交互使用的
+
+![image-20230527103954621](assets/image-20230527103954621.png)
+
+计算机程序之间的通讯，通过IP只能锁定计算机，但是无法锁定具体的程序。通过端口可以锁定计算机上具体的程序，确保程序之间进行沟通。IP地址相当于小区地址，在小区内可以有许多住户(程序)，而门牌号(端口)就是各个住户(程序)的联系地址。
+
+#### （2）查看端口占用
+
+```bash
+nmap IP地址
+```
+
+例如
+
+```bash
+[haojie@localhost ~]$ nmap 127.0.0.1
+
+Starting Nmap 6.40 ( http://nmap.org ) at 2023-05-26 20:13 PDT
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.00030s latency).
+Not shown: 996 closed ports
+PORT    STATE SERVICE
+22/tcp  open  ssh
+25/tcp  open  smtp
+111/tcp open  rpcbind
+631/tcp open  ipp
+
+Nmap done: 1 IP address (1 host up) scanned in 0.06 seconds
+```
+
+#### （3）netstat命令
+
+netstat查看端口占用，安装`yum -y install net-tools`
+
+```bash
+netstat -anp | grep 端口号
+```
+
+## 五、linux状态
+
+### 1. 进程管理
+
+```bash
+# -e: 显示全部的进程
+# -f: 以完全格式化的形式展示全部的信息
+ps [-e -f]
+```
+
+一般来说，经常用`ps -ef`，列出进程的全部信息
+
+```bash
+[haojie@localhost ~]$ ps -ef
+UID         PID   PPID  C STIME TTY          TIME CMD
+root          1      0  0 19:49 ?        00:00:02 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+root          2      0  0 19:49 ?        00:00:00 [kthreadd]
+root          4      2  0 19:49 ?        00:00:00 [kworker/0:0H]
+root          6      2  0 19:49 ?        00:00:01 [ksoftirqd/0]
+root          7      2  0 19:49 ?        00:00:00 [migration/0]
+root          8      2  0 19:49 ?        00:00:00 [rcu_bh]
+root          9      2  0 19:49 ?        00:00:01 [rcu_sched]
+root         10      2  0 19:49 ?        00:00:00 [lru-add-drain]
+haojie    52310   2476  0 20:59 pts/0    00:00:00 ps -ef
+```
+
+从左到右分别是
+
+- uid：进程所属的用户id
+- pid：进程的进程号id
+- ppid：进程的父id，启动此进程的其他进程
+- C：此进程的CPU占用率
+- STIME：进程的启动时间
+- TTY：启动此进程的终端序号。？表示非终端启动。pts/0表示0号终端。
+- TIME：进程占用CPU的时间
+- CMD：进程的启动命令
+
+### 2. 关闭进程
+
+```bash
+# -9 强制关闭
+kill [-9] 进程id
+```
+
+### 3. 主机状态监控
+
+```bash
+[haojie@localhost ~]$ top
+top - 21:10:29 up  1:21,  2 users,  load average: 0.07, 0.04, 0.05
+Tasks: 203 total,   1 running, 202 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  8.2 us,  2.7 sy,  0.0 ni, 89.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem :   995672 total,    72520 free,   682004 used,   241148 buff/cache
+KiB Swap:        0 total,        0 free,        0 used.   139264 avail Mem 
+
+   PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND                                                
+  1883 haojie    20   0 3012828 154968  27732 S  4.0 15.6   0:33.37 gnome-shell                                            
+  1156 root      20   0  325788  40436  15816 S  3.7  4.1   0:15.14 X                                                      
+  2469 haojie    20   0  682308  19948   8076 S  2.0  2.0   0:08.08 gnome-terminal-                                        
+  2208 haojie    20   0  608948   9464   2344 S  1.0  1.0   0:16.98 vmtoolsd                                               
+   292 root      20   0       0      0      0 S  0.3  0.0   0:08.47 xfsaild/sda3                                           
+```
+
+第一行
+
+- `top - 21:10:29`，运行top的系统时间
+- `up  1:21`，启动了1:21
+- `2 users`，两个用户登录
+- `load average: 0.07, 0.04, 0.05`，1分钟，5分钟，15分钟的平均负载
+
+第二行
+
+- `Tasks: 203 total`，有203个进程
+- `1 running, 202 sleeping,   0 stopped,   0 zombie`，一个正在跑进程，202个睡眠进程，0个停止进程，0个僵尸进程
+
+第三行Cpu，主要关注前面两个
+
+- `8.2 us`，用户CPU使用率
+- `2.7sy`，系统CPU使用率
+
+第四行：Kib Mem：物理内存。第五行Kib Swap：虚拟内存。
+
+- `total`：总量
+- `free`：空闲
+- `used`：使用
+- `buff/cache`：buff和cache占用
+
+
+
+下面
+
+- PID：进程id
+- USER：进程所属用户
+- PR：进程优先级，越小越高
+- NI：负值表示高优先级，正表示低优先级
+- VIRT：进程使用虚拟内存，单位KB
+- RES：进程使用物理内存，单位KB
+- SHR：进程使用共享内存，单位KB
+- S：进程状态（S休眠，R运行，Z僵死状态，N负数优先级，I空闲状态）
+- ％CPU：进程占用CPU率
+- ％MEM：进程占用内存率
+- TIME＋：进程使用CPU时间总计，单位10毫秒
+- COMMAND：进程的命令或名称或程序文件路径
+
+### 4. 磁盘信息监控
+
+```bash
+df -h
+```
+
+## 六、环境变量
+
+### 1. 查看环境变量
+
+可以通过`env`查看系统所有的环境变量，内容比较多，下面是比较常见的环境变量。
+
+```bash
+[haojie@localhost ~]$ env
+HOSTNAME=localhost.localdomain
+SHELL=/bin/bash
+USER=haojie
+USERNAME=haojie
+PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/home/haojie/.local/bin:/home/haojie/bin
+PWD=/home/haojie
+LANG=en_US.UTF-8
+HOME=/home/haojie
+```
+
+之所以我们在任意目录都可以执行`cd`命令，是因为`cd`命令的二进制文件加入到环境变量`PATH`中了
+
+### 2. $符合
+
+`$`符合用于取"变量"的值，可以通过`$环境变量名`来取得环境变量的值，例如`echo $PATH`，就可以取得`PATH`这个环境变量的值了。
+
+```bash
+[haojie@localhost ~]$ echo $PATH
+/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/home/haojie/.local/bin:/home/haojie/bin
+```
+
+当和其他内容混合在一起的时候，可以加上`{}`
+
+```bash
+[haojie@localhost ~]$ echo ${PATH}-huanjingbianliang
+/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/home/haojie/.local/bin:/home/haojie/bin-huanjingbianliang
+```
+
+### 3. 设置环境变量
+
+#### （1）临时设置
+
+```bash
+export 变量名=变量值
+```
+
+#### （2）永久生效
+
+- 针对当前用户：修改`~/.bashrc`文件
+
+- 针对所有用户：修改`/etc/profile`文件
+
+## 七、文件操作
+
+### 1. 文件上传、下载
+
+```bash
+rz # 上传
+sz # 下载
+```
+
+### 2. tar命令
+
+```
+tar [-c -v -x -f -z -C]
+```
+
+- -c：创建压缩文件，用于压缩模式
+- -v：显示压缩解压过程
+- -x：解压模式
+- -f：要创建或者解压的文件，该参数必须在最后
+- -z：gzip模式，不使用就是.tar
+- -C：选择解压目的地
+
+压缩文件
+
+```bash
+[haojie@localhost ~]$ tar -zcvf test.zip test.txt 
+test.txt
+```
+
+解压文件
+
+```bash
+[haojie@localhost ~]$ tar -xvf test.tar -C /home/haojie
+test.txt
+```
+
+### 3. zip命令
+
+```bash
+zip [-r] 参数1, 参数2, 参数n
+```
+
+- -r：被压缩的包含文件夹的时候，需要-r选项
+
+```bash
+[haojie@localhost ~]$ zip -r test.zip test.txt Videos/
+  adding: test.txt (deflated 9%)
+  adding: Videos/ (stored 0%)
+```
+
+### 4. unzip命令
+
+```bash
+unzip [-d] 参数
+```
+
+- -d：指定要解压去的位置
+
+```bash
+[haojie@localhost ~]$ unzip test.zip -d ~/jieya/
+Archive:  test.zip
+  inflating: /home/haojie/jieya/test.txt  
+   creating: /home/haojie/jieya/Videos/
+```
+
