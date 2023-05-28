@@ -4,7 +4,9 @@
 
 一定要采用docker官方文档提供的方法来安装, 否则后面可能会有问题
 
-### 1.配置源
+### 1. Ubuntu
+
+#### （1）配置源
 
 ```Bash
  1. sudo apt-get update
@@ -20,7 +22,7 @@
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 ```
 
-### 2.docker国内源
+#### （2）docker国内源
 
 采用上面的配置,在下一步安装docker的时候,可能速度非常慢,可以配置国内源
 
@@ -44,7 +46,7 @@ $ sudo apt-get update
 配置文件在 /etc/docker/daemon.json
 ```
 
-### 3.安装docker
+#### （3）安装docker
 
 ```Bash
  sudo apt-get update
@@ -53,7 +55,7 @@ $ sudo apt-get update
 
 完成安装后测试一下`sudo docker run hello-world`, 后面可以用`sudo chmod 666 /var/run/docker.sock`来去掉sudo.
 
-### 4. 安装docker-compose
+#### （4）安装docker-compose
 
 ```Bash
 1.安装 
@@ -66,7 +68,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-### 5. 添加当前用户到docker用户组
+#### （5）添加当前用户到docker用户组
 
 ```Bash
 1.groups  # 列出自己的用户组，确认自己在不在 docker 组中
@@ -75,21 +77,112 @@ docker-compose --version
 
 3.sudo gpasswd -a ${USER} docker  # 把当前用户加入到docker组中
 
-4.
-  # 重启docker服务
+4.sudo systemctl restart docker # 重启docker服务
 ```
 
-## 二、镜像, 容器和仓库
+### 2. CentOS
 
-### 1. 镜像
+#### （1）配置源
 
-#### （1）基本概念
+```bash
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+```
 
-操作系统环境, image可以重复建立container, 就像印钞机可以一直印钞票
+#### （2）安装docker
 
-#### （2）常用命令
+```bash
+# 安装docker
+sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# 启动docker
+sudo systemctl start docker
+# 测试是否安装完成
+sudo docker run hello-world
+```
 
-- docker images: 查看本机所有镜像
+#### （3）添加当前用户到docker用户组
+
+```bash
+1.groups  # 列出自己的用户组，确认自己在不在 docker 组中
+
+2.sudo groupadd docker  # 没有则新增docker组
+
+3.sudo gpasswd -a ${USER} docker  # 把当前用户加入到docker组中
+
+4.sudo systemctl restart docker # 重启docker服务
+```
+
+#### （4）安装docker-compose
+
+```bash
+1.安装 
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+2.修改权限
+sudo chmod +x /usr/local/bin/docker-compose
+
+3.测试
+docker-compose --version
+```
+
+## 二、docker架构
+
+### 1. 架构图
+
+docker由三部分组成：
+
+- clients：客户端。操作docker的命令都是在客户端完成的，客户端发送命令给守护进程。
+- hosts：
+  - daemon：守护进程。启动docker之后，守护进程就会启动。
+  - image：镜像。**镜像就相当于是一个root文件系统**，例如ubuntu:16.04就包含了完整的一套ubuntu16.04最小系统的root文件系统。
+  - container：容器。镜像和容器的关系就像是类和对象的关系。镜像是静态的定义，容器是镜像运行时的实体。容器可以被创建、启动、停止、删除、暂停等。
+- repository：镜像仓库。仓库可以看作是一个代码控制中心，用来保存镜像。
+
+<img src="assets/image-20230528175018209.png" alt="image-20230528175018209" style="zoom:130%;" />
+
+### 2. 阿里云镜像加速器
+
+登录阿里云<https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors>，找到加速器地址。然后按照下面的文档来进行配置。对于mac，可以在桌面端软件中进行配置。
+
+<img src="assets/image-20230528181011681.png" alt="image-20230528181011681" style="zoom:80%;" />
+
+```bash
+cat ~/.docker/daemon.json  # 检查配置
+```
+
+## 三、docker命令
+
+### 1. docker服务相关命令
+
+```bash
+systemctl start docker # 启动docker服务
+systemctl stop docker # 停止docker服务
+systemctl restart docker # 重启docker服务
+systemctl status docker # 查看docker服务状态
+systemctl enable docker # 设置开机启动docker服务
+```
+
+`systemctl start docker`启动docker之后，可以查看系统的进程
+
+```bash
+[haojie@localhost ~]$ ps -ef | grep docker
+root       3155      1  0 04:20 ?        00:00:02 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+haojie    10844   3471  0 06:01 pts/0    00:00:00 grep --color=auto docker
+```
+
+如果此时强行将该进程杀掉`kill -9 3155`，守护进程会另外再启动一个进程。
+
+```bash
+[haojie@localhost ~]$ ps -ef | grep docker
+root      11082      1 28 06:12 ?        00:00:00 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+haojie    11221   3471  0 06:12 pts/0    00:00:00 grep --color=auto docker
+```
+
+### 2. 镜像相关命令
+
+#### （1）查看镜像
+
+docker images: 查看本机所有镜像
 
 ```bash
 REPOSITORY            TAG       IMAGE ID       CREATED          SIZE
@@ -97,7 +190,13 @@ shuhaojie/stackdemo   latest    3f4ec02bf9d8   40 minutes ago   84.6MB
 redis                 alpine    0b405767398c   8 days ago       29.9MB
 ```
 
-这里的REPOSITORY+TAG就是镜像的名称，可以在docker ps中看到
+- REPOSITORY：仓库，也就是镜像名称。镜像涵盖了软件和其运行的文件系统。
+- TAG：版本号。如果不指定版本，就用最新版本`latest`
+- IMAGE ID：镜像id。删除等操作的时候会用到。
+- CREATED：镜像创建时间。
+- SIZE：镜像大小。
+
+REPOSITORY+TAG就是镜像的具体版本名称，可以在docker ps中看到
 
 ```bash
 CONTAINER ID   IMAGE                        COMMAND                  CREATED       STATUS       PORTS                                       NAMES
@@ -107,36 +206,104 @@ CONTAINER ID   IMAGE                        COMMAND                  CREATED    
 
 **当我们在build镜像的时候，通过这个名称来判断本地是否存在这个镜像，如果存在就用本地的**
 
+#### （2）搜索镜像
+
+```bash
+[haojie@localhost ~]$ docker search redis
+NAME                                DESCRIPTION                                     STARS     OFFICIAL   AUTOMATED
+redis                               Redis is an open source key-value store that…   12100     [OK]       
+redislabs/redisearch                Redis With the RedisSearch module pre-loaded…   56                   
+redislabs/redisinsight              RedisInsight - The GUI for Redis                87                   
+redislabs/rebloom                   A probablistic datatypes module for Redis       23                   [OK]
+redislabs/redis                     Clustered in-memory database engine compatib…   38                   
+redislabs/rejson                    RedisJSON - Enhanced JSON data type processi…   53                   
+redis/redis-stack-server            redis-stack-server installs a Redis server w…   44                   
+```
+
+#### （3）拉取镜像
+
+```bash
+[haojie@localhost ~]$ docker pull redis
+Using default tag: latest
+latest: Pulling from library/redis
+f03b40093957: Pull complete 
+8db26c5e8435: Pull complete 
+37e84c7a626f: Pull complete 
+806c192e0375: Pull complete 
+08769906aa59: Pull complete 
+635073d8ccd5: Pull complete 
+Digest: sha256:f9724694a0b97288d2255ff2b69642dfba7f34c8e41aaf0a59d33d10d8a42687
+Status: Downloaded newer image for redis:latest
+docker.io/library/redis:latest
+```
+
+下载的时候，是一层一层下载的
+
 - docker run：创建一个容器并启动容器。**docker run = docker create + docker start**
 
-- docker build: 通过Dockerfile来制作镜像。
+#### （4）制作镜像
 
-  ```bash
-  docker build -t koa-demo:1.0 . # .表示Dockerfile相对路径
-  ```
+docker build: 可以通过Dockerfile来制作镜像。
 
-- docker push：将镜像推送到仓库。**在推送之前，仓库上一定要创建对应的REPOSITORY**，例如上面的shuhaojie/stackdemo:latest，需要创建stackdemo这个仓库。
+```bash
+docker build -t koa-demo:1.0 . # .表示Dockerfile相对路径
+```
 
-  <img src="/Users/shuhaojie/Library/Application Support/typora-user-images/image-20230426144225630.png" alt="image-20230426144225630" style="zoom:50%;" />
+#### （5）上传镜像
 
-- docker rmi <image_id>: 删除镜像. 删除所有镜像: docker rmi -f $(docker images -aq)
+docker push：将镜像上传到仓库。上传镜像要稍微复杂一些，它需要以下步骤。
 
-- docker commit: 容器转化为镜像. 假设一个容器没有vim, 但希望安装vim后, 即使重启容器也会有vim, 下面是主要步骤
+- 登录dockerhub账号
 
-  ```bash
-  docker exec -it container_id bash # 在终端: 进入容器
-  yum install vim -y  # 在容器内: 安装vim
-  docker commit container_id image  # 在终端: 容器转镜像   
-  ```
+  - 如果是dockerhub：`docker login`
 
-- docker save: 将镜像制作为tar文件
-- docker load: 导入使用docker save出的镜像
+  - 如果是公司dockerhub：`docker login myRegistry.com`
 
-### 2. 容器
+- 修改镜像名称
 
-#### （1）基本概念
+  - 如果是dockerhub：`docker tag <image_id> username/myImage`
+  - 如果是公司dockerhub：`docker tag <image_id> myRegistry.com/myImage`
 
-docker利用的正是container来运行程序
+- 上传镜像：
+
+  - 如果是dockerhub：`docker push username/my-repo`
+  - 如果是公司dockerhub：`docker push myRegistry.com/myImage`
+
+#### （6）删除镜像
+
+```bash
+docker rmi <image_id> # 删除镜像.  
+docker rmi -f $(docker images -aq) # 删除所有镜像
+```
+
+#### （7）容器转镜像
+
+docker commit: 容器转化为镜像。假设一个容器没有vim, 但希望安装vim后, 即使重启容器也会有vim, 下面是主要步骤
+
+```bash
+docker exec -it container_id bash # 在终端: 进入容器
+yum install vim -y  # 在容器内: 安装vim
+docker commit container_id image  # 在终端: 容器转镜像   
+```
+
+#### （8）镜像导出为tar
+
+docker save: 将镜像制作为tar文件
+
+```bash
+[haojie@localhost ~]$ docker save -o hello-world.tar 9c7a54a9a43c
+```
+
+#### （9）导入tar为镜像
+
+docker load: 导入使用docker save出的镜像
+
+```bash
+[haojie@localhost ~]$ docker load -i hello-world.tar 
+Loaded image ID: sha256:9c7a54a9a43cca047013b82af109fe963fde787f63f9e016fdc3384500c2823d
+```
+
+### 3. 容器
 
 #### （2）常用命令
 
@@ -148,7 +315,7 @@ docker利用的正是container来运行程序
 - docker stop: 停止一个已经启动的容器(容器只有停止在停止状态才可以删除)
 - 停止所有容器：docker kill $(docker ps -q)
 
-### 3. 仓库
+### 4. 仓库
 
 #### （1）基本概念
 
