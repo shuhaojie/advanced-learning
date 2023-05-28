@@ -239,8 +239,6 @@ docker.io/library/redis:latest
 
 下载的时候，是一层一层下载的
 
-- docker run：创建一个容器并启动容器。**docker run = docker create + docker start**
-
 #### （4）制作镜像
 
 docker build: 可以通过Dockerfile来制作镜像。
@@ -303,17 +301,116 @@ docker load: 导入使用docker save出的镜像
 Loaded image ID: sha256:9c7a54a9a43cca047013b82af109fe963fde787f63f9e016fdc3384500c2823d
 ```
 
-### 3. 容器
+### 3. 容器相关命令
 
-#### （2）常用命令
+#### （1）查看容器
 
-- docker start: 启动已经存在的容器
-- docker exec: 进入已经启动的容器
-- docker ps -a: 所有容器列表
-- docker ps: 所有运行中的容器
-- docker rm container_id: 删除容器. 删除所有容器:docker rm $(docker ps -a -q)
-- docker stop: 停止一个已经启动的容器(容器只有停止在停止状态才可以删除)
-- 停止所有容器：docker kill $(docker ps -q)
+docker ps  查看正在运行的容器。docker ps -a 查看所有容器。
+
+```
+[haojie@localhost ~]$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS     NAMES
+5ca7ec3cf3d3   centos:latest   "/bin/bash"   3 minutes ago   Created             c1
+```
+
+- CONTAINER ID：容器id
+- IMAGE：镜像的具体版本名称
+- COMMAND：容器初始化时的命令
+- CREATED：创建时间
+- STATUS：状态
+- PORTS：端口映射
+- NAMES：容器名称
+
+#### （2）创建容器
+
+###### a. docker run
+
+docker run：创建容器并启动容器。
+
+```bash
+[haojie@localhost ~]$ docker run -it --name=c1 centos:latest /bin/bash
+[root@558a3bb85020 /]# 
+```
+
+- -i：保持容器一直运行
+- -t：创建一个终端
+- --name：容器名称
+- /bin/bash：在容器内执行/bin/bash命令
+
+此时我们就会进入到容器内部，如果此时键入`exit`命令会退出并关闭容器。
+
+```bash
+[root@558a3bb85020 /]# exit
+[haojie@localhost ~]$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+而如果我们将启动命令稍微修改，改为在后台运行（`-d`参数），就不会出现上述情况了。
+
+```bash
+[haojie@localhost ~]$ docker run -id --name=c1 centos:latest /bin/bash
+846ee75c472532f8f2826f4229bf0515c79269821b076a3cd9bcf2432984518a
+[haojie@localhost ~]$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS         PORTS     NAMES
+846ee75c4725   centos:latest   "/bin/bash"   4 seconds ago   Up 2 seconds             c1
+[haojie@localhost ~]$ docker exec -it 846 /bin/bash
+[root@846ee75c4725 /]# 
+```
+
+###### b. docker create
+
+docker run：创建容器并启动容器，而docker create则是只创建容器。
+
+```bash
+[haojie@localhost ~]$ docker create -it --name=c1 centos:latest /bin/bash
+5ca7ec3cf3d3a5c1c9681e1be1c21902697764366ffe2da81fafc2b7de2c40e8
+[haojie@localhost ~]$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS     NAMES
+5ca7ec3cf3d3   centos:latest   "/bin/bash"   6 seconds ago   Created             c1
+```
+
+**docker run = docker create + docker start**
+
+#### （3）启动容器
+
+```bash
+docker start {container_id}
+```
+
+#### （4）停止容器
+
+```bash
+docker stop {container_id}
+```
+
+#### （5）杀掉容器
+
+```bash
+docker kill -s KILL {container_id}
+```
+
+#### （6）删除容器
+
+```bash
+# 删除单个容器
+docker rm {container_id}
+# 删除所有容器
+docker rm $(docker ps -a -q)
+```
+
+#### （7）进入容器
+
+进入已经启动的容器，如果容器没有启动，不能进入
+
+```bash
+docker exec -it {container_id} /bin/bash
+```
+
+#### （8）查看容器信息
+
+```bash
+docker inspect {container_id}
+```
 
 ### 4. 仓库
 
