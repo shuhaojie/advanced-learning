@@ -171,6 +171,16 @@ qtufjz1qkgl6   idps-product-metal_chapter_locating_predict             replicate
 nf4brcv01fxp   idps-product-metal_diff_extract_predict                 replicated   1/1        dockerhub.datagrand.com/idps/diff_extract:release_ci_20221117_360dd4d
 ```
 
+另外，还可以通过-v来**去掉包含关键字的数据**
+
+```bash
+[haojie@master ~]$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+centos              latest              5d0da3dc9764        20 months ago       231MB
+[haojie@master ~]$ docker images | grep -v centos
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+```
+
 ### 8. echo, tail, 重定向符
 
 #### （1）echo
@@ -559,9 +569,19 @@ netstat查看端口占用，安装`yum -y install net-tools`
 netstat -anp | grep 端口号
 ```
 
+#### （4）lsof命令
+
+lsof命令也是查看端口占用
+
+```bash
+lsof -i:80 
+```
+
 ## 五、linux状态
 
 ### 1. 进程管理
+
+#### （1）查看进程
 
 ```bash
 # -e: 显示全部的进程
@@ -596,14 +616,14 @@ haojie    52310   2476  0 20:59 pts/0    00:00:00 ps -ef
 - TIME：进程占用CPU的时间
 - CMD：进程的启动命令
 
-### 2. 关闭进程
+#### （2）关闭进程
 
 ```bash
 # -9 强制关闭
 kill [-9] 进程id
 ```
 
-### 3. 主机状态监控
+### 2. top命令
 
 ```bash
 [haojie@localhost ~]$ top
@@ -645,8 +665,6 @@ KiB Swap:        0 total,        0 free,        0 used.   139264 avail Mem
 - `used`：使用
 - `buff/cache`：buff和cache占用
 
-
-
 下面
 
 - PID：进程id
@@ -662,10 +680,47 @@ KiB Swap:        0 total,        0 free,        0 used.   139264 avail Mem
 - TIME＋：进程使用CPU时间总计，单位10毫秒
 - COMMAND：进程的命令或名称或程序文件路径
 
-### 4. 磁盘信息监控
+### 3. 磁盘信息监控
+
+#### （1）df命令
+
+df：disk free，显示磁盘分区上可以使用的磁盘空间
 
 ```bash
-df -h
+[haojie@master ~]$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+devtmpfs        989M     0  989M   0% /dev
+tmpfs          1000M   24K 1000M   1% /dev/shm
+tmpfs          1000M  960K  999M   1% /run
+tmpfs          1000M     0 1000M   0% /sys/fs/cgroup
+/dev/vda1        40G  8.1G   30G  22% /
+tmpfs           200M     0  200M   0% /run/user/0
+tmpfs           200M     0  200M   0% /run/user/1001
+```
+
+- Filesystem：文件系统，文件系统是指保存数据的实际设备，用来管理和组织磁盘数据。面对一个原始的磁盘分区，可通过mkfs系列工具来制作文件系统，例如`mkfs.ext4 /dev/sda1`
+- Mounted on：文件系统生成后，还不能直接使用，需要借助"mount"操作，将这个文件系统加入到Linux的管理，这样用户才能看到并访问
+
+#### （2）du命令
+
+du：disk used，检查磁盘空间使用量。直接输入du没有加任何选项时，则du会分析当前所在目录里的子目录所占用的硬盘空间。
+
+```bash
+[haojie@master ~]$ sudo du -sh /
+6.7G	/
+```
+
+du命令显示出的用量和df稍微有些不一样，想深究可以看这个<https://serverfault.com/q/275206/942586>
+
+#### （3）free命令
+
+free：显示ram的详细信息
+
+```bash
+[haojie@master ~]$ free -h
+              total        used        free      shared  buff/cache   available
+Mem:           2.0G        313M         80M        1.0M        1.6G        1.5G
+Swap:            0B          0B          0B
 ```
 
 ## 六、环境变量
@@ -729,7 +784,7 @@ sz # 下载
 
 ### 2. tar命令
 
-```
+```bash
 tar [-c -v -x -f -z -C]
 ```
 

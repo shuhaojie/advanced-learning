@@ -135,7 +135,7 @@ docker由三部分组成：
 - hosts：
   - daemon：守护进程。启动docker之后，守护进程就会启动。
   - image：镜像。**镜像就相当于是一个root文件系统**，例如ubuntu:16.04就包含了完整的一套ubuntu16.04最小系统的root文件系统。
-  - container：容器。镜像和容器的关系就像是类和对象的关系。镜像是静态的定义，容器是镜像运行时的实体。容器可以被创建、启动、停止、删除、暂停等。
+  - container：容器。镜像和容器的关系就像是类和对象的关系。镜像是静态的定义，容器是镜像运行时的实体。**container 就是 process，启动container背后的原理就是启动process。**
 - repository：镜像仓库。仓库可以看作是一个代码控制中心，用来保存镜像。
 
 <img src="assets/image-20230528175018209.png" alt="image-20230528175018209" style="zoom:130%;" />
@@ -185,6 +185,7 @@ haojie    11221   3471  0 06:12 pts/0    00:00:00 grep --color=auto docker
 docker images: 查看本机所有镜像
 
 ```bash
+[haojie@localhost ~]$ docker images
 REPOSITORY            TAG       IMAGE ID       CREATED          SIZE
 shuhaojie/stackdemo   latest    3f4ec02bf9d8   40 minutes ago   84.6MB
 redis                 alpine    0b405767398c   8 days ago       29.9MB
@@ -321,21 +322,95 @@ CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS    
 - PORTS：端口映射
 - NAMES：容器名称
 
-#### （2）创建容器
+#### （2）创建容器docker run(重要)
 
-###### a. docker run
+###### a. 定义
 
 docker run：创建容器并启动容器。
 
+> 官方定义：The `docker run` command runs a command in a new container, pulling the image if needed and starting the container。docker run 命令在新容器中运行一个命令，在需要时拉取镜像并启动容器。
+
+基本命令`docker run [OPTIONS] IMAGE [COMMAND] [ARG...]`
+
+最基础的，不加任何参数，本地也没有image.
+
 ```bash
-[haojie@localhost ~]$ docker run -it --name=c1 centos:latest /bin/bash
-[root@558a3bb85020 /]# 
+[haojie@master ~]$ docker run centos:latest
+Unable to find image 'centos:latest' locally
+latest: Pulling from library/centos
+a1d0c7532777: Pull complete
+Digest: sha256:a27fd8080b517143cbbbab9dfb7c8571c40d67d534bbdee55bd6c473f432b177
+Status: Downloaded newer image for centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+[haojie@master ~]$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+42f9a6a7b104        centos:latest       "/bin/bash"         14 seconds ago      Exited (0) 13 seconds ago                       gifted_meitner
+[haojie@master ~]$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+centos              latest              5d0da3dc9764        20 months ago       231MB
 ```
 
-- -i：保持容器一直运行
-- -t：创建一个终端
-- --name：容器名称
-- /bin/bash：在容器内执行/bin/bash命令
+执行完命令之后，会拉取镜像，并创建一个容器
+
+###### b. 参数选项OPTIONS
+
+- `--name`: 为容器指定一个名称
+
+```bash
+[haojie@master ~]$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+[haojie@master ~]$ docker run --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+[haojie@master ~]$ docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES
+4518c27ef85b        centos:latest       "/bin/bash"         5 seconds ago       Exited (0) 3 seconds ago                       centos
+```
+
+- `--interactive`,`-i`: 以交互模式运行容器，通常与-t 同时使用
+- `-t`: 为容器重新分配一个伪输入终端，通常与`-i` 同时使用；
+- `-d`: 后台运行容器
+- `-p`: 指定端口映射，格式为：主机(宿主)端口:容器端口
+- `--expose`: 开放一个端口或一组端口
+- `--volume , -v`: 绑定一个卷
+- `--entrypoint`: 
+
+###### c. 命令COMMAND
+
+在容器内执行命令(/bin/bash)。**docker容器会在其主进程完成时退出，因此如果想让容器保持运行，需要一个不结束的命令。**
+
+例1：容器保持运行
+
+```
+[haojie@master ~]$ docker run -id --name=c1 centos:latest tail -f /dev/null
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+813247f2301a7cee4c91b5042babe29247d113467ca87654d54b27993e6eb34c
+[haojie@master ~]$ docker ps -a
+CONTAINER ID        IMAGE                COMMAND                  CREATED             STATUS                   PORTS               NAMES
+813247f2301a        centos:latest        "tail -f /dev/null"      5 seconds ago       Up 4 seconds                                 c1
+```
+
+例2：容器未能保持运行
+
+```
+[haojie@master ~]$ docker run -id --name=c1 centos:latest cat /etc/os-release
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+02da5d61de873287c9e064a4b1e3989cd4fb237dca7586727fe0333dc3b1464c
+[haojie@master ~]$ docker ps -a
+CONTAINER ID        IMAGE                COMMAND                  CREATED             STATUS                     PORTS               NAMES
+02da5d61de87        centos:latest        "cat /etc/os-release"    4 seconds ago       Exited (0) 3 seconds ago                       c1
+```
+
+当容器启动后，此时可以看到一个进程。同时可以看到该进程是由服务端的进程创建出来的。
+
+```
+[haojie@master ~]$ ps -ef | grep docker
+root     23691 24382  0 15:19 ?        00:00:00 docker-containerd-shim -namespace moby -workdir /var/lib/docker/containerd/daemon/io.containerd.runtime.v1.linux/moby/528fa1ec98377cf17ef7eeea3960327ce3237c07a08ee80fa6e45cc4fba8b2b3 -address /var/run/docker/containerd/docker-containerd.sock -containerd-binary /usr/bin/docker-containerd -runtime-root /var/run/docker/runtime-runc -systemd-cgroup
+root     24382 24375  0 Apr30 ?        01:06:25 docker-containerd --config /var/run/docker/containerd/containerd.toml
+```
+
+
+
+
 
 此时我们就会进入到容器内部，如果此时键入`exit`命令会退出并关闭容器。
 
@@ -357,17 +432,9 @@ CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS         PORT
 [root@846ee75c4725 /]# 
 ```
 
-###### b. docker create
+###### d. docker create
 
-docker run：创建容器并启动容器，而docker create则是只创建容器。
-
-```bash
-[haojie@localhost ~]$ docker create -it --name=c1 centos:latest /bin/bash
-5ca7ec3cf3d3a5c1c9681e1be1c21902697764366ffe2da81fafc2b7de2c40e8
-[haojie@localhost ~]$ docker ps -a
-CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS     NAMES
-5ca7ec3cf3d3   centos:latest   "/bin/bash"   6 seconds ago   Created             c1
-```
+docker run：创建容器并启动容器，而docker create则是只创建容
 
 **docker run = docker create + docker start**
 
