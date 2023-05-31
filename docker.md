@@ -318,11 +318,11 @@ CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS    
 - IMAGE：镜像的具体版本名称
 - COMMAND：容器初始化时的命令
 - CREATED：创建时间
-- STATUS：状态
+- STATUS：状态。正在运行的docker状态为up...
 - PORTS：端口映射
 - NAMES：容器名称
 
-#### （2）创建容器docker run(重要)
+#### （2）docker run
 
 ###### a. 定义
 
@@ -368,10 +368,70 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 
 - `--interactive`,`-i`: 以交互模式运行容器，通常与-t 同时使用
 - `-t`: 为容器重新分配一个伪输入终端，通常与`-i` 同时使用；
+
+```bash
+[haojie@master ~]$ docker run -it --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+# 会进入容器
+[root@8ddb4a170d12 /]# 
+```
+
 - `-d`: 后台运行容器
+
+```bash
+[haojie@master ~]$ docker run -id --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+b421e4ba51867fc64956275bbc5739d41888bcfc217f96155030022453e786e6
+[haojie@master ~]$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+b421e4ba5186        centos:latest       "/bin/bash"         3 seconds ago       Up 2 seconds                            centos
+```
+
 - `-p`: 指定端口映射，格式为：主机(宿主)端口:容器端口
+
+```bash
+[haojie@master ~]$ docker run -id -p 8000:80 --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+855f4d9c15fac0f98ec5fc35c09b2b50ade1c70c9cdab81f7f1bc742951abdd0
+[haojie@master ~]$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS                  NAMES
+855f4d9c15fa        centos:latest       "/bin/bash"         4 seconds ago       Up 3 seconds        0.0.0.0:8000->80/tcp   centos
+```
+
 - `--expose`: 开放一个端口或一组端口
+
+```bash
+[haojie@master ~]$ docker run -id --expose 8000 --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+475172fa9928825aa00070f9450e86610456f7665ee3b30aa46ca6f81dec05bb
+[haojie@master ~]$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+475172fa9928        centos:latest       "/bin/bash"         4 seconds ago       Up 3 seconds        8000/tcp            centos
+```
+
 - `--volume , -v`: 绑定一个卷
+
+```bash
+[haojie@master ~]$ docker run -id -p 80:8000 -v /home/haojie:/haojie --name=centos centos:latest
+WARNING: IPv4 forwarding is disabled. Networking will not work.
+11447a624c1e97c4e6646cbb6f00e4d3199e5dca56b6e8811872a91cc34fa218
+[haojie@master ~]$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS                  NAMES
+11447a624c1e        centos:latest       "/bin/bash"         6 seconds ago       Up 5 seconds        0.0.0.0:80->8000/tcp   centos
+[haojie@master ~]$ docker exec -it 114 /bin/bash
+[root@11447a624c1e /]# cd haojie/
+[root@11447a624c1e haojie]# ls
+1.txt
+[root@11447a624c1e haojie]# touch 2.txt
+[root@11447a624c1e haojie]# exit
+[haojie@master ~]$ ll
+总用量 4
+-rw-rw-r-- 1 haojie haojie 13 5月  29 10:03 1.txt
+-rw-r--r-- 1 root   root    0 5月  31 22:23 2.txt
+```
+
+由于存在挂载关系，在容器内创建一个文件，在容器外也可以看到该文件。
+
 - `--entrypoint`: 
 
 ###### c. 命令COMMAND
