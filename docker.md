@@ -528,6 +528,9 @@ docker inspect {container_id}
 
 ### 9. 构建一个web服务器容器
 
+- 离线安装cmake
+- 离线安装python3
+
 
 
 
