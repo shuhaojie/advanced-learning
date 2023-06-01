@@ -150,9 +150,7 @@ docker由三部分组成：
 cat ~/.docker/daemon.json  # 检查配置
 ```
 
-## 三、docker命令
-
-### 1. docker服务相关命令
+## 三、docker服务相关命令
 
 ```bash
 systemctl start docker # 启动docker服务
@@ -178,9 +176,9 @@ root      11082      1 28 06:12 ?        00:00:00 /usr/bin/dockerd -H fd:// --co
 haojie    11221   3471  0 06:12 pts/0    00:00:00 grep --color=auto docker
 ```
 
-### 2. 镜像相关命令
+## 四、镜像相关命令
 
-#### （1）查看镜像
+### 1. 查看镜像
 
 docker images: 查看本机所有镜像
 
@@ -207,7 +205,7 @@ CONTAINER ID   IMAGE                        COMMAND                  CREATED    
 
 **当我们在build镜像的时候，通过这个名称来判断本地是否存在这个镜像，如果存在就用本地的**
 
-#### （2）搜索镜像
+### 2. 搜索镜像
 
 ```bash
 [haojie@localhost ~]$ docker search redis
@@ -221,7 +219,7 @@ redislabs/rejson                    RedisJSON - Enhanced JSON data type processi
 redis/redis-stack-server            redis-stack-server installs a Redis server w…   44                   
 ```
 
-#### （3）拉取镜像
+### 3. 拉取镜像
 
 ```bash
 [haojie@localhost ~]$ docker pull redis
@@ -240,7 +238,7 @@ docker.io/library/redis:latest
 
 下载的时候，是一层一层下载的
 
-#### （4）制作镜像
+### 4. 制作镜像
 
 docker build: 可以通过Dockerfile来制作镜像。
 
@@ -248,7 +246,7 @@ docker build: 可以通过Dockerfile来制作镜像。
 docker build -t koa-demo:1.0 . # .表示Dockerfile相对路径
 ```
 
-#### （5）上传镜像
+### 5. 上传镜像
 
 docker push：将镜像上传到仓库。上传镜像要稍微复杂一些，它需要以下步骤。
 
@@ -268,14 +266,14 @@ docker push：将镜像上传到仓库。上传镜像要稍微复杂一些，它
   - 如果是dockerhub：`docker push username/my-repo`
   - 如果是公司dockerhub：`docker push myRegistry.com/myImage`
 
-#### （6）删除镜像
+### 6. 删除镜像
 
 ```bash
 docker rmi <image_id> # 删除镜像.  
 docker rmi -f $(docker images -aq) # 删除所有镜像
 ```
 
-#### （7）容器转镜像
+### 7. 容器转镜像
 
 docker commit: 容器转化为镜像。假设一个容器没有vim, 但希望安装vim后, 即使重启容器也会有vim, 下面是主要步骤
 
@@ -285,7 +283,7 @@ yum install vim -y  # 在容器内: 安装vim
 docker commit container_id image  # 在终端: 容器转镜像   
 ```
 
-#### （8）镜像导出为tar
+### 8. 镜像导出为tar
 
 docker save: 将镜像制作为tar文件
 
@@ -293,7 +291,7 @@ docker save: 将镜像制作为tar文件
 [haojie@localhost ~]$ docker save -o hello-world.tar 9c7a54a9a43c
 ```
 
-#### （9）导入tar为镜像
+### 9. 导入tar为镜像
 
 docker load: 导入使用docker save出的镜像
 
@@ -302,9 +300,9 @@ docker load: 导入使用docker save出的镜像
 Loaded image ID: sha256:9c7a54a9a43cca047013b82af109fe963fde787f63f9e016fdc3384500c2823d
 ```
 
-### 3. 容器相关命令
+## 五、 容器相关命令
 
-#### （1）查看容器
+### 1. 查看容器
 
 docker ps  查看正在运行的容器。docker ps -a 查看所有容器。
 
@@ -322,9 +320,11 @@ CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS    PORTS    
 - PORTS：端口映射
 - NAMES：容器名称
 
-#### （2）docker run
+### 2. 创建容器
 
-###### a. 定义
+#### （1）docker run
+
+###### a. 基本使用
 
 docker run：创建容器并启动容器。
 
@@ -352,9 +352,9 @@ centos              latest              5d0da3dc9764        20 months ago       
 
 执行完命令之后，会拉取镜像，并创建一个容器
 
-###### b. 参数选项OPTIONS
+###### b. `name` 参数
 
-- `--name`: 为容器指定一个名称
+name：为容器指定一个名称
 
 ```bash
 [haojie@master ~]$ docker ps -a
@@ -366,8 +366,11 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 4518c27ef85b        centos:latest       "/bin/bash"         5 seconds ago       Exited (0) 3 seconds ago                       centos
 ```
 
+###### c. `-i`, `-t`和`-d`参数
+
 - `--interactive`,`-i`: 以交互模式运行容器，通常与-t 同时使用
-- `-t`: 为容器重新分配一个伪输入终端，通常与`-i` 同时使用；
+
+- `-t`: 为容器重新分配一个伪输入终端，通常与`-i` 同时使用
 
 ```bash
 [haojie@master ~]$ docker run -it --name=centos centos:latest
@@ -387,7 +390,9 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 b421e4ba5186        centos:latest       "/bin/bash"         3 seconds ago       Up 2 seconds                            centos
 ```
 
-- `-p`: 指定端口映射，格式为：主机(宿主)端口:容器端口
+###### d. `-p`参数
+
+`-p`: 指定端口映射，格式为：主机(宿主)端口:容器端口
 
 ```bash
 [haojie@master ~]$ docker run -id -p 8000:80 --name=centos centos:latest
@@ -398,7 +403,9 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 855f4d9c15fa        centos:latest       "/bin/bash"         4 seconds ago       Up 3 seconds        0.0.0.0:8000->80/tcp   centos
 ```
 
-- `--expose`: 开放一个端口或一组端口
+###### e. `expose`参数
+
+`--expose`: 开放一个端口或一组端口
 
 ```bash
 [haojie@master ~]$ docker run -id --expose 8000 --name=centos centos:latest
@@ -409,7 +416,9 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 475172fa9928        centos:latest       "/bin/bash"         4 seconds ago       Up 3 seconds        8000/tcp            centos
 ```
 
-- `--volume , -v`: 绑定一个卷
+###### f. `-v`参数
+
+`--volume , -v`: 绑定一个卷
 
 ```bash
 [haojie@master ~]$ docker run -id -p 80:8000 -v /home/haojie:/haojie --name=centos centos:latest
@@ -432,9 +441,11 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 
 由于存在挂载关系，在容器内创建一个文件，在容器外也可以看到该文件。
 
-- `--entrypoint`: 
+###### g. `--entrypoint`参数
 
-###### c. 命令COMMAND
+`entrypoint`:
+
+###### h. 命令COMMAND
 
 在容器内执行命令(/bin/bash)。**docker容器会在其主进程完成时退出，因此如果想让容器保持运行，需要一个不结束的命令。**
 
@@ -462,61 +473,37 @@ CONTAINER ID        IMAGE                COMMAND                  CREATED       
 
 当容器启动后，此时可以看到一个进程。同时可以看到该进程是由服务端的进程创建出来的。
 
-```
+```bash
 [haojie@master ~]$ ps -ef | grep docker
 root     23691 24382  0 15:19 ?        00:00:00 docker-containerd-shim -namespace moby -workdir /var/lib/docker/containerd/daemon/io.containerd.runtime.v1.linux/moby/528fa1ec98377cf17ef7eeea3960327ce3237c07a08ee80fa6e45cc4fba8b2b3 -address /var/run/docker/containerd/docker-containerd.sock -containerd-binary /usr/bin/docker-containerd -runtime-root /var/run/docker/runtime-runc -systemd-cgroup
 root     24382 24375  0 Apr30 ?        01:06:25 docker-containerd --config /var/run/docker/containerd/containerd.toml
 ```
 
-
-
-
-
-此时我们就会进入到容器内部，如果此时键入`exit`命令会退出并关闭容器。
-
-```bash
-[root@558a3bb85020 /]# exit
-[haojie@localhost ~]$ docker ps
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-```
-
-而如果我们将启动命令稍微修改，改为在后台运行（`-d`参数），就不会出现上述情况了。
-
-```bash
-[haojie@localhost ~]$ docker run -id --name=c1 centos:latest /bin/bash
-846ee75c472532f8f2826f4229bf0515c79269821b076a3cd9bcf2432984518a
-[haojie@localhost ~]$ docker ps
-CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS         PORTS     NAMES
-846ee75c4725   centos:latest   "/bin/bash"   4 seconds ago   Up 2 seconds             c1
-[haojie@localhost ~]$ docker exec -it 846 /bin/bash
-[root@846ee75c4725 /]# 
-```
-
-###### d. docker create
+#### （2）docker create
 
 docker run：创建容器并启动容器，而docker create则是只创建容
 
 **docker run = docker create + docker start**
 
-#### （3）启动容器
+### 3. 启动容器
 
 ```bash
 docker start {container_id}
 ```
 
-#### （4）停止容器
+### 4. 停止容器
 
 ```bash
 docker stop {container_id}
 ```
 
-#### （5）杀掉容器
+### 5. 杀掉容器
 
 ```bash
 docker kill -s KILL {container_id}
 ```
 
-#### （6）删除容器
+### 6. 删除容器
 
 ```bash
 # 删除单个容器
@@ -525,7 +512,7 @@ docker rm {container_id}
 docker rm $(docker ps -a -q)
 ```
 
-#### （7）进入容器
+### 7. 进入容器
 
 进入已经启动的容器，如果容器没有启动，不能进入
 
@@ -533,11 +520,17 @@ docker rm $(docker ps -a -q)
 docker exec -it {container_id} /bin/bash
 ```
 
-#### （8）查看容器信息
+### 8. 查看容器信息
 
 ```bash
 docker inspect {container_id}
 ```
+
+### 9. 构建一个web服务器容器
+
+
+
+
 
 ### 4. 仓库
 
