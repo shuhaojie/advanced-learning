@@ -273,6 +273,8 @@ groupadd 用户组 # 创建用户组
 useradd [-g -d]用户名
 ```
 
+例如`adduser haojie -d /home/haojie`
+
 - 删除用户
 
 ```bash

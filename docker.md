@@ -68,7 +68,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-#### （5）添加当前用户到docker用户组
+#### （5）添加用户到docker组
 
 ```Bash
 1.groups  # 列出自己的用户组，确认自己在不在 docker 组中
@@ -100,7 +100,7 @@ sudo systemctl start docker
 sudo docker run hello-world
 ```
 
-#### （3）添加当前用户到docker用户组
+#### （3）添加用户到docker组
 
 ```bash
 1.groups  # 列出自己的用户组，确认自己在不在 docker 组中
@@ -150,7 +150,9 @@ docker由三部分组成：
 cat ~/.docker/daemon.json  # 检查配置
 ```
 
-## 三、docker服务相关命令
+## 三、docker服务
+
+### 1. 开启docker服务
 
 ```bash
 systemctl start docker # 启动docker服务
@@ -159,6 +161,8 @@ systemctl restart docker # 重启docker服务
 systemctl status docker # 查看docker服务状态
 systemctl enable docker # 设置开机启动docker服务
 ```
+
+### 2. 对docker服务的理解
 
 `systemctl start docker`启动docker之后，可以查看系统的进程
 
@@ -280,7 +284,7 @@ docker commit: 容器转化为镜像。假设一个容器没有vim, 但希望安
 ```bash
 docker exec -it container_id bash # 在终端: 进入容器
 yum install vim -y  # 在容器内: 安装vim
-docker commit container_id image  # 在终端: 容器转镜像   
+docker commit container_id repo:tag  # 在终端: 容器转镜像   
 ```
 
 ### 8. 镜像导出为tar
@@ -441,11 +445,7 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 
 由于存在挂载关系，在容器内创建一个文件，在容器外也可以看到该文件。
 
-###### g. `--entrypoint`参数
-
-`entrypoint`:
-
-###### h. 命令COMMAND
+###### g. 命令COMMAND
 
 在容器内执行命令(/bin/bash)。**docker容器会在其主进程完成时退出，因此如果想让容器保持运行，需要一个不结束的命令。**
 
@@ -508,6 +508,8 @@ docker kill -s KILL {container_id}
 ```bash
 # 删除单个容器
 docker rm {container_id}
+# 删除一个正在运行的容器
+docker rm -f {container_id}
 # 删除所有容器
 docker rm $(docker ps -a -q)
 ```
@@ -528,81 +530,130 @@ docker inspect {container_id}
 
 ### 9. 构建一个web服务器容器
 
-- 离线安装cmake
-- 离线安装python3
+- 拉取一个centos镜像，并启动一个centos容器
 
+```bash
+docker run -id centos:latest
+```
 
+- 在容器内安装python3
 
+```bash
+# 解决yum源的问题
+cd /etc/yum.repos.d/
+sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+yum update -y
+# 安装python3
+yum install -y python3
+```
 
+- 做一次commit，制作一个包含python3的镜像
 
-### 4. 仓库
+```bash
+docker commit 943 centos:python3
+```
 
-#### （1）基本概念
+- 用包含python3的镜像来启动一个容器
 
-docker的registry和git概念一样, 可以从registry上传或下载images.
+```bash
+# http_server会监听8080端口
+docker run -id -v /home/haojie/python/:/haojie -p 80:9091 centos:python3 python3 /haojie/http_server.py
+```
 
-#### （2）常用命令
+- 在本地终端或者其他终端访问`curl 121.41.55.89:80` ，注意云服务器要开放80端口
 
-- docker push：将本地的镜像上传到镜像仓库
+### 10. 构建mysql服务器
+
+- 启动一个mysql容器
+
+```bash
+# 1. 暴露端口
+# 2. 指定root的密码
+docker run -id --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql:latest
+```
+
+- 数据库软件连接mysql，注意云服务器要开放3306 端口
+
+## 六、仓库相关命令
+
+### 1. 基本概念
+
+docker的registry和git概念一样, 可以从registry上传或下载images。当我们使用dockerhub的镜像时，可以不使用域名，如果使用其他私域的镜像时，需要带上域名。
+
+### 2. 常用命令
+
+docker push：将本地的镜像上传到镜像仓库
 
 ## 三、Dockerfile
 
 ### 1. Dockerfile简介
 
-Dockerfile是一个用来构建镜像的文本文件, 文本内容包含了一条条构建镜像所需的指令和说明. Dockerfile中有三个常见的命令
+Dockerfile是一个用来构建镜像的文本文件, 文本内容包含了一条条构建镜像所需的指令和说明。例如我们要在含python3的centos镜像基础上安装vim，可以这么写。
 
-* FROM: 定制的镜像都是基于FROM的镜像, 后续的操作都是基于该镜像做的操作
+```dockerfile
+FROM centos:python3
+RUN yum -y install vim
+```
 
-* RUN: 用于执行后面跟着的命令行命令, 有两种格式
-
-    1. shell格式
-
-    ```Bash
-    RUN <命令行命令>   # 命令行命令 等同于在终端操作的shell命令
-    ```
-
-    2. exec格式
-
-    ```Bash
-    RUN ["可执行文件", "参数1", "参数2"]
-    ```
-
-> 注意，在RUN命令中有路径时，指的是容器外的相对路径，而不是容器内的路径
-> 此外，要注意的是，执行`pip install -r requirements.txt`前，需要先执行`COPY requirements.txt .`
-
-* CMD: **在镜像构建好，用镜像启动容器时(docker run)会执行的命令**
-
-> 注意: 当docker-compose启动容器时，**它并不会去执行Dockerfile中的CMD**，而是会去执行docker-compose中的command
+这里的FROM表示从哪个镜像开始构建，可以是本地已有的镜像，也可以是dockerhub或者私域的镜像。
 
 ### 2. 构建镜像
 
 在Dockerfile文件的存放目录下, 执行构建动作
 
-```Bash
+```bash
 # 1. nginx表示镜像名称， v3表示版本
 # 2. 最后的.表示Dockerfile相对终端执行环境的相对路径
-docker build -t nginx:v3 .  
+docker build -t centos:python3 .  
 ```
 
-### 3. 文件实例
+### 3. Dockerfile命令
 
-```Bash
-FROM centos
-RUN yum install wget
-RUN wget -O redis.tar.gz "http://download.redis.io/releases/redis-5.0.3.tar.gz"
-RUN tar -xvf redis.tar.gz
+#### （1）FROM
+
+定制的镜像都是基于FROM的镜像, 后续的操作都是基于该镜像做的操作
+
+#### （2）RUN
+
+用于执行后面跟着的命令行命令
+
+```bash
+RUN <命令行命令>   # 命令行命令 等同于在终端操作的shell命令
 ```
 
-以上执行会创建 3 层镜像, 可简化为以下格式:
+例如前面的
 
-```Bash
-FROM centos
-RUN yum install wget \
-    && wget -O redis.tar.gz "http://download.redis.io/releases/redis-5.0.3.tar.gz" \
-    && tar -xvf redis.tar.gz
+```bash
+RUN yum -y install vim
 ```
 
-如上, 以 && 符号连接命令, 这样执行后只会创建1层镜像
+注意，在RUN命令中有路径时，指的是容器外的相对路径，而不是容器内的路径，因为它此时还只是构建镜像。
+
+#### （3）COPY
+
+ 将宿主机的文件拷贝到容器中
+
+```dockerfile
+FROM centos:vim-python3
+RUN yum -y install vim
+COPY python/ /haojie/
+CMD python3 /haojie/http_server.py
+```
+
+一定要注意，这里宿主机的路径是相对Dockerfile的路径，不能用绝对路径，例如写成/home/haojie/python，这种写法是不对的。
+
+#### （4）EXPOSE
+
+暴露端口，
+
+#### （5）CMD
+
+在镜像构建好后，用镜像启动容器时(docker run)会执行的命令。
+
+> 注意: 当docker-compose启动容器时，**它并不会去执行Dockerfile中的CMD**，而是会去执行docker-compose中的command
+
+如上，以 && 符号连接命令, 这样执行后只会创建1层镜像
 
 ### 4. 构建并启动容器
 
