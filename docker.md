@@ -645,7 +645,23 @@ CMD python3 /haojie/http_server.py
 
 #### （4）EXPOSE
 
-暴露端口，
+暴露端口，这个命令的作用参见官方文档。
+
+> The `EXPOSE` instruction does not actually publish the port. It functions as **a type of documentation between the person who builds the image and the person who runs the container**, about which ports are intended to be published
+
+expose命令的作用并不会去暴露端口，而是作为构建镜像的开发人员和运行容器的开发人员之间一个“接口文档”，构建镜像的开发人员告诉运行容器的开发人员，该镜像监听哪个端口。因为对于运行容器的开发人员来说，它可能接触不到源码，不清楚该镜像能暴露哪个端口，expose命令能帮助他了解到。例如redis镜像。
+
+```bash
+[haojie@hecs-300320 ~]$ docker run -id redis:latest
+Unable to find image 'redis:latest' locally
+latest: Pulling from library/redis
+c7ae2cc6d9d5d2fee1aefbea14014bb42806b45c60b7d6a1cf3313d5367ae895
+[haojie@hecs-300320 ~]$ docker ps
+CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS         PORTS                                                  NAMES
+c7ae2cc6d9d5   redis:latest   "docker-entrypoint.s…"   5 seconds ago   Up 3 seconds   6379/tcp                                               awesome_cori
+```
+
+它这里就暴露了6379端口，因此我们需要在运行的时候通过-p来做端口映射，来保证通过访问宿主机来访问容器。
 
 #### （5）CMD
 
