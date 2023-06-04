@@ -632,7 +632,7 @@ RUN yum -y install vim
 
 #### （3）COPY
 
- 将宿主机的文件拷贝到容器中
+ 将宿主机的文件拷贝到镜像中。由于它是构建镜像时的命令，因此它会将文件写入到镜像中，只要是由该镜像创建的容器，都会有拷贝过去的文件，这是它和挂载的不同。
 
 ```dockerfile
 FROM centos:vim-python3
@@ -665,15 +665,29 @@ c7ae2cc6d9d5   redis:latest   "docker-entrypoint.s…"   5 seconds ago   Up 3 se
 
 #### （5）CMD
 
-在镜像构建好后，用镜像启动容器时(docker run)会执行的命令。
+在镜像构建好后，用镜像启动容器时(docker run)会执行的命令。**当在Dockerfile中写了CMD时，如果在用docker run或者docker-compose启动容器时，又再加了启动命令，此时执行的是docker run或者docker-compose的命令，如果没有加，执行的就是Dockerfile中的命令。**
 
-> 注意: 当docker-compose启动容器时，**它并不会去执行Dockerfile中的CMD**，而是会去执行docker-compose中的command
+例子1：docker run加了命令`/bin/bash`
 
-如上，以 && 符号连接命令, 这样执行后只会创建1层镜像
+```bash
+[haojie@hecs-300320 ~]$ docker run -id centos:python-vim /bin/bash
+9a25fca7d79046bf693e95e2836744a5d973b12dc25adefe9b78e7e56e56df8f
+[haojie@hecs-300320 ~]$ docker ps
+CONTAINER ID   IMAGE               COMMAND                   CREATED         STATUS         PORTS                                                  NAMES
+9a25fca7d790   centos:python-vim   "/bin/bash"               4 seconds ago   Up 3 seconds                                                          nice_mendel
+33d744b8729a   mysql:latest        "docker-entrypoint.s…"   8 hours ago     Up 8 hours     0.0.0.0:3306->3306/tcp, :::3306->3306/tcp, 33060/tcp   mysql
+```
 
-### 4. 构建并启动容器
+例子2：docker run中不加命令
 
-针对单个容器, 可以先通过`docker build`来构建镜像，并通过`docker run`来创建并启动容器。**如果涉及多个容器，就可以通过docker-compose来实现**。
+```bash
+[haojie@hecs-300320 ~]$ docker run -id centos:python-vim
+dba629df688a0fb326d7e1c668fe4393673ca3f1789dd7a9e666fcd9344990d7
+[haojie@hecs-300320 ~]$ docker ps
+CONTAINER ID   IMAGE               COMMAND                   CREATED         STATUS         PORTS                                                  NAMES
+dba629df688a   centos:python-vim   "/bin/sh -c 'python3…"   5 seconds ago   Up 4 seconds                                                          vigorous_solomon
+33d744b8729a   mysql:latest        "docker-entrypoint.s…"   8 hours ago     Up 8 hours     0.0.0.0:3306->3306/tcp, :::3306->3306/tcp, 33060/tcp   mysql
+```
 
 ## 四、docker-compose
 
