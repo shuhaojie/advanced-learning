@@ -304,6 +304,24 @@ docker load: 导入使用docker save出的镜像
 Loaded image ID: sha256:9c7a54a9a43cca047013b82af109fe963fde787f63f9e016fdc3384500c2823d
 ```
 
+### 10. 为镜像打标签
+
+```bash
+docker tag {image_id} registry:tag
+```
+
+例如
+
+```bash
+[haojie@hecs-300320 ~]$ docker tag 6ac centos:python3-vim
+[haojie@hecs-300320 ~]$ docker images
+REPOSITORY   TAG           IMAGE ID       CREATED        SIZE
+centos       python-vim    6ac7cccc4920   17 hours ago   620MB
+centos       python3-vim   6ac7cccc4920   17 hours ago   620MB
+mysql        latest        05db07cd74c0   11 days ago    565MB
+redis        latest        0ec8ab59a35f   12 days ago    117MB
+```
+
 ## 五、 容器相关命令
 
 ### 1. 查看容器
@@ -614,6 +632,10 @@ docker build -t centos:python3 .
 
 定制的镜像都是基于FROM的镜像, 后续的操作都是基于该镜像做的操作
 
+#### （2）WORKDIR
+
+
+
 #### （2）RUN
 
 用于执行后面跟着的命令行命令
@@ -695,32 +717,103 @@ dba629df688a   centos:python-vim   "/bin/sh -c 'python3…"   5 seconds ago   Up
 
 用于构建和启动多容器工具, 通过`docker-compose.yml`来配置项目需要的所有服务, 然后`docker-compose up`启动所有服务
 
-### 2.文件实例
+### 2.多服务实例
 
-```Bash
-version: '2.2'
-services:  
-  web:  # 服务名称, docker-compose中一个服务可以有多个容器
-    container_name: aiplatform  # 容器名称
-    image: aiplatform:v3  # 如果本地有镜像, 直接用本地镜像; 如果没有, 采用repository的; 如果没有指定repository, 就是用Docker Hub的.
-    ports:
-      - 8001:8000  # 端口映射
-    depends_on:
-      - db  # 依赖的服务
-    environment:
-      - DEBUG=1
-    volumes:
-      - aiplatform_data:/data  # volume
-      - ${PROJECTDIR}/backend:/workspaces # bind mount, 没有workspaces的话，会自己创建
-      - ${PROJECTDIR}/logs:/logs
-    command: bash -c "sleep 10 && bash /workspaces/start.sh && tail -f /dev/null"  # 启动docker时候的命令
+参考官方文档<https://docs.docker.com/compose/gettingstarted/>
 
-volumes:
-  postgres_data:
-    name: postgres_data
-  redis_data:
-    name: redis_data
+#### （1）文件准备
+
+- 新建一个目录：
+
+```bash
+mkdir composetest
+cd composetest
 ```
+
+- 新建一个`app.py`文件
+
+```python
+# composetest/app.py
+import time
+
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+cache = redis.Redis(host='redis', port=6379)
+
+def get_hit_count():
+    retries = 5
+    while True:
+        try:
+            return cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
+
+@app.route('/')
+def hello():
+    count = get_hit_count()
+    return 'Hello World! I have been seen {} times.\n'.format(count)
+```
+
+- 新建一个requirements.txt，里面包含如下内容
+
+```txt
+# composetest/requirements.txt
+flask
+redis
+```
+
+- 新建一个Dockerfile
+
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM python:3.7-alpine
+WORKDIR /code
+ENV FLASK_APP=app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+RUN apk add --no-cache gcc musl-dev linux-headers
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+EXPOSE 5000
+COPY . .
+CMD ["flask", "run"]
+```
+
+#### （2）启动服务
+
+```bash
+docker compose up  # 注意，最新版本可以不要中间的"-"
+```
+
+此时应该会看到两个服务都启动起来了
+
+```bash
+CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS          PORTS                                                  NAMES
+b69ccfb85c03   composetest-web   "flask run"              12 minutes ago   Up 12 minutes   0.0.0.0:8000->5000/tcp, :::8000->5000/tcp              composetest-web-1
+ea71df663f36   redis:alpine      "docker-entrypoint.s…"   12 minutes ago   Up 12 minutes   6379/tcp                                               composetest-redis-1
+```
+
+#### （3）访问服务
+
+在服务器内部执行
+
+```bash
+curl http://127.0.0.1:5000
+```
+
+可以看到输出
+
+```bash
+Hello World! I have been seen 1 times.
+```
+
+由于是在服务器上部署，还可以在浏览器中访问http://121.36.104.55:8000/，也是一样的输出。注意，要开放8000端口。
+
+### 3. docker-compose指令
 
 #### (1) service
 
