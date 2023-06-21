@@ -293,6 +293,8 @@ docker save: 将镜像制作为tar文件
 
 ```bash
 [haojie@localhost ~]$ docker save -o hello-world.tar 9c7a54a9a43c
+# 这种方式更好
+[haojie@localhost ~]$ docker save 9c7a54a9a43c | gzip > hello-world.tar
 ```
 
 ### 9. 导入tar为镜像
