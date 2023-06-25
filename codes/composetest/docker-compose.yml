@@ -1,0 +1,6 @@
+services:
+  web:
+    build: .
+    scale: 4
+  redis:
+    image: "redis:alpine"

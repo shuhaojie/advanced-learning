@@ -59,13 +59,13 @@ $ sudo apt-get update
 
 ```Bash
 1.安装 
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose.yml
 
 2.修改权限
-sudo chmod +x /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose.yml
 
 3.测试
-docker-compose --version
+docker-compose.yml --version
 ```
 
 #### （5）添加用户到docker组
@@ -93,7 +93,7 @@ sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/dock
 
 ```bash
 # 安装docker
-sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose.yml-plugin
 # 启动docker
 sudo systemctl start docker
 # 测试是否安装完成
@@ -116,13 +116,13 @@ sudo docker run hello-world
 
 ```bash
 1.安装 
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose.yml
 
 2.修改权限
-sudo chmod +x /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose.yml
 
 3.测试
-docker-compose --version
+docker-compose.yml --version
 ```
 
 ## 二、docker架构
@@ -636,9 +636,20 @@ docker build -t centos:python3 .
 
 #### （2）WORKDIR
 
+官方文档的说明,`WORKDIR`的作用是为`RUN`, `COPY`等指令设置工作目录，相当于cd到那个目录，然后执行对应的指令。如果没有设置`WORKDIR`，它会自动创建，默认是`\`，如果是从其他镜像开始构建的，那么`WORKDIR`就是其他镜像。
 
+> The `WORKDIR` instruction sets the working directory for any `RUN`, `CMD`, `ENTRYPOINT`, `COPY` and `ADD` instructions that follow it in the `Dockerfile`. If the `WORKDIR` doesn’t exist, it will be created even if it’s not used in any subsequent `Dockerfile` instruction.
 
-#### （2）RUN
+```bash
+WORKDIR /a
+WORKDIR b
+WORKDIR c
+RUN pwd
+```
+
+输出就是`/a/b/c`
+
+#### （3）RUN
 
 用于执行后面跟着的命令行命令
 
@@ -654,9 +665,9 @@ RUN yum -y install vim
 
 注意，在RUN命令中有路径时，指的是容器外的相对路径，而不是容器内的路径，因为它此时还只是构建镜像。
 
-#### （3）COPY
+#### （4）COPY
 
- 将宿主机的文件拷贝到镜像中。由于它是构建镜像时的命令，因此它会将文件写入到镜像中，只要是由该镜像创建的容器，都会有拷贝过去的文件，这是它和挂载的不同。
+将宿主机的文件拷贝到镜像中。由于它是构建镜像时的命令，因此它会将文件写入到镜像中，只要是由该镜像创建的容器，都会有拷贝过去的文件，这是它和挂载的不同。
 
 ```dockerfile
 FROM centos:vim-python3
@@ -665,9 +676,9 @@ COPY python/ /haojie/
 CMD python3 /haojie/http_server.py
 ```
 
-一定要注意，这里宿主机的路径是相对Dockerfile的路径，不能用绝对路径，例如写成/home/haojie/python，这种写法是不对的。
+一定要注意，**这里宿主机的路径是相对Dockerfile的路径，不能用绝对路径**，例如写成/home/haojie/python，这种写法是不对的，因为dockerfile会把它翻译成 `dockerfile路径+/home/haojie/python`。
 
-#### （4）EXPOSE
+#### （5）EXPOSE
 
 暴露端口，这个命令的作用参见官方文档。
 
@@ -687,7 +698,7 @@ c7ae2cc6d9d5   redis:latest   "docker-entrypoint.s…"   5 seconds ago   Up 3 se
 
 它这里就暴露了6379端口，因此我们需要在运行的时候通过-p来做端口映射，来保证通过访问宿主机来访问容器。
 
-#### （5）CMD
+#### （6）CMD
 
 在镜像构建好后，用镜像启动容器时(docker run)会执行的命令。**当在Dockerfile中写了CMD时，如果在用docker run或者docker-compose启动容器时，又再加了启动命令，此时执行的是docker run或者docker-compose的命令，如果没有加，执行的就是Dockerfile中的命令。**
 
@@ -785,6 +796,18 @@ COPY . .
 CMD ["flask", "run"]
 ```
 
+- 新建一个docker-compose.yml
+
+```yaml
+services:
+  web:
+    build: .
+    ports:
+      - "8000:5000"
+  redis:
+    image: "redis:alpine"
+```
+
 #### （2）启动服务
 
 ```bash
@@ -815,20 +838,49 @@ Hello World! I have been seen 1 times.
 
 由于是在服务器上部署，还可以在浏览器中访问http://121.36.104.55:8000/，也是一样的输出。注意，要开放8000端口。
 
-### 3. docker-compose指令
+### 3. docker-compose的service
 
-#### (1) service
+#### （1）service含义
 
-关于service，有如下几点要注意
+在上面的例子，web实际上指的是一个服务，而不是一个容器，一个服务可以包含多个容器。在docker-compose中，必须有service name，而不必有container name，如果没有container name，那么container name=`<当前工作路径名>_<service name>_<sequence number>`，这里的sequence number是从1开始的。
 
-1. service name和container name: 例如上面的例子, 这里的web实际上指的是一个服务，而不是一个容器，一个服务可以包含多个容器。在docker-compose中，必须有service name，而不必有container name，如果没有container name，那么container name=`当前工作路径名>_<service name>_<sequence number>`，这里的sequence number是从1开始的
+#### （2）service和container的关系
 
-2. 非常重要的一点: service name 可以广泛的被应用
+参考 <https://stackoverflow.com/a/35585573/10844937>
+
+> A service can be run by one or multiple containers. With `docker` you can handle containers and with `docker-compose` you can handle services.
+
+service可以由一个或多个container组成。docker一般来操作container，docker-compose一般来操作service。可以在docker-      compose中指定scale，例如
+
+```yaml
+services:
+  web:
+    build: .
+		scale: 4
+  redis:
+    image: "redis:alpine"
+```
+
+此时会有4个container
+
+```bash
+➜  composetest git:(master) ✗ docker ps                  
+CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS          PORTS      NAMES
+f17412bbb248   composetest-web   "flask run"              15 seconds ago   Up 5 seconds    5000/tcp   composetest-web-4
+ded649c4cec8   composetest-web   "flask run"              15 seconds ago   Up 5 seconds    5000/tcp   composetest-web-3
+642b05b9c66e   composetest-web   "flask run"              15 seconds ago   Up 5 seconds    5000/tcp   composetest-web-2
+7732ae7c78c8   composetest-web   "flask run"              16 seconds ago   Up 5 seconds    5000/tcp   composetest-web-1
+1cf0b1c34972   redis:alpine      "docker-entrypoint.s…"   10 minutes ago   Up 10 minutes   6379/tcp   composetest-redis-1
+```
+
+#### （3）service的广泛应用
+
+非常重要的一点: service name 可以广泛的被应用
 
 * 在nginx中，可以看到`proxy_pass http://web:8000;`这样的表示式，这里的web就是指的service name
 * 在django的settings中，可以看到数据的配置如下，这里的`db`指的也是service name
 
-```Python
+```bash
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -841,18 +893,9 @@ DATABASES = {
 }
 ```
 
-* 同样的还有celery broker的配置，这里的host指的也是service name
+### 4. docker-compose的指令
 
-```Python
-redis_passwd = '4a53e4f5c42fd5a31890860b204472c5'
-redis_host = 'redis'
-redis_port = "6379"
-redis_db = "1"
-
-CELERY_BROKER_URL = f'redis://:{redis_passwd}@{redis_host}:{redis_port}/{redis_db}'
-```
-
-#### (2) image和build
+#### （1）image和build
 
 image和build都是用来构建、启动容器用的镜像
 
@@ -870,18 +913,22 @@ services:
         buildno: 1  # Dockerfile构建镜像时候的参数，在构建时候的环境变量
 ```
 
-#### (3) ports
+#### （2）build
+
+
+
+#### （3）ports
 
 * port: 8001:8000，当外部访问主机的8001端口时，主机将8001端口映射到容器的8000端口
 
 * expose: expose暴露端口给link(下面会解释)到当前容器的容器
 
-#### (4) depends_on
+#### （4）depends_on
 
 * depends_on: 定义服务之间的依赖关系，上面的例子中db服务启动顺序要优先于web服务
 * links: 当我们链接(links)容器时，docker会创建环境变量并将容器添加到已知主机列表中
 
-#### (5) environment
+#### （5）environment
 
 environment变量可以在构建镜像过程中，在Dockerfile中去使用。也可以在已构建好的镜像制作出的容器中使用，在容器的终端中输入`env`即可查找到所有的环境变量。可以用如下的python代码拿到具体的环境变量。
 
