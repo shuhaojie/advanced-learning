@@ -403,6 +403,8 @@ WARNING: IPv4 forwarding is disabled. Networking will not work.
 [root@8ddb4a170d12 /]# 
 ```
 
+想要退出并保证容器是启动状态，可以用ctrl+p+q来退出
+
 - `-d`: 后台运行容器
 
 ```bash
@@ -548,7 +550,16 @@ docker exec -it {container_id} /bin/bash
 docker inspect {container_id}
 ```
 
-### 9. 构建一个web服务器容器
+### 9. docker attach
+
+连接到正在运行中的容器，连接后可以查看容器的标准输入、输出
+
+```bash
+docker run -dit --name topdemo2 ubuntu:22.04 /usr/bin/top -b
+docker attach topdemo2
+```
+
+### 10. 构建一个web服务器容器
 
 - 拉取一个centos镜像，并启动一个centos容器
 
@@ -583,7 +594,7 @@ docker run -id -v /home/haojie/python/:/haojie -p 80:9091 centos:python3 python3
 
 - 在本地终端或者其他终端访问`curl 121.41.55.89:80` ，注意云服务器要开放80端口
 
-### 10. 构建mysql服务器
+### 11. 构建mysql服务器
 
 - 启动一个mysql容器
 
@@ -636,7 +647,7 @@ docker build -t centos:python3 .
 
 #### （2）WORKDIR
 
-官方文档的说明,`WORKDIR`的作用是为`RUN`, `COPY`等指令设置工作目录，相当于cd到那个目录，然后执行对应的指令。如果没有设置`WORKDIR`，它会自动创建，默认是`\`，如果是从其他镜像开始构建的，那么`WORKDIR`就是其他镜像。
+官方文档的说明,`WORKDIR`的作用是为`RUN`, `COPY`等指令设置工作目录，相当于cd到那个目录，然后执行对应的指令。如果没有设置`WORKDIR`，它会自动创建，默认是`/`，如果是从其他镜像开始构建的，那么`WORKDIR`就是其他镜像。
 
 > The `WORKDIR` instruction sets the working directory for any `RUN`, `CMD`, `ENTRYPOINT`, `COPY` and `ADD` instructions that follow it in the `Dockerfile`. If the `WORKDIR` doesn’t exist, it will be created even if it’s not used in any subsequent `Dockerfile` instruction.
 
@@ -663,7 +674,7 @@ RUN <命令行命令>   # 命令行命令 等同于在终端操作的shell命令
 RUN yum -y install vim
 ```
 
-注意，在RUN命令中有路径时，指的是容器外的相对路径，而不是容器内的路径，因为它此时还只是构建镜像。
+注意，**在RUN命令中有路径时，指的是容器外的相对路径，而不是容器内的路径，因为它此时还只是构建镜像。**
 
 #### （4）COPY
 
@@ -676,7 +687,9 @@ COPY python/ /haojie/
 CMD python3 /haojie/http_server.py
 ```
 
-一定要注意，**这里宿主机的路径是相对Dockerfile的路径，不能用绝对路径**，例如写成/home/haojie/python，这种写法是不对的，因为dockerfile会把它翻译成 `dockerfile路径+/home/haojie/python`。
+- 源路径src：宿主机内的路径，**是相对Dockerfile的路径，不能用绝对路径**。例如写成/home/haojie/python，这种写法是不对的，因为dockerfile会把它翻译成 `dockerfile路径+/home/haojie/python`。
+
+- 目的路径dest：容器内的路径，**用的是绝对路径，或者是相对workdir的路径**。
 
 #### （5）EXPOSE
 
@@ -840,17 +853,13 @@ Hello World! I have been seen 1 times.
 
 ### 3. docker-compose的service
 
-#### （1）service含义
+#### （1）service和container
 
-在上面的例子，web实际上指的是一个服务，而不是一个容器，一个服务可以包含多个容器。在docker-compose中，必须有service name，而不必有container name，如果没有container name，那么container name=`<当前工作路径名>_<service name>_<sequence number>`，这里的sequence number是从1开始的。
-
-#### （2）service和container的关系
-
-参考 <https://stackoverflow.com/a/35585573/10844937>
+在上面的例子，web实际上指的是一个服务，而不是一个容器。参考<https://stackoverflow.com/a/35585573/10844937>
 
 > A service can be run by one or multiple containers. With `docker` you can handle containers and with `docker-compose` you can handle services.
 
-service可以由一个或多个container组成。docker一般来操作container，docker-compose一般来操作service。可以在docker-      compose中指定scale，例如
+service可以由一个或多个container组成。docker一般来操作container，docker-compose一般来操作service。可以在docker-      compose中指定scale参数来指定container的个数，例如
 
 ```yaml
 services:
@@ -863,7 +872,7 @@ services:
 
 此时会有4个container
 
-```bash
+```
 ➜  composetest git:(master) ✗ docker ps                  
 CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS          PORTS      NAMES
 f17412bbb248   composetest-web   "flask run"              15 seconds ago   Up 5 seconds    5000/tcp   composetest-web-4
@@ -873,7 +882,9 @@ ded649c4cec8   composetest-web   "flask run"              15 seconds ago   Up 5 
 1cf0b1c34972   redis:alpine      "docker-entrypoint.s…"   10 minutes ago   Up 10 minutes   6379/tcp   composetest-redis-1
 ```
 
-#### （3）service的广泛应用
+在docker-compose中，必须有service name，而不必有container name，如果没有container name，那么container name=`<当前工作路径名>_<service name>_<sequence number>`，这里的sequence number是从1开始的。
+
+#### （2）service的广泛应用
 
 非常重要的一点: service name 可以广泛的被应用
 
@@ -895,12 +906,9 @@ DATABASES = {
 
 ### 4. docker-compose的指令
 
-#### （1）image和build
+#### （1）image
 
-image和build都是用来构建、启动容器用的镜像
-
-* image: **如果本地有镜像, 直接用本地镜像**; 如果没有, 采用repository的; 如果没有指定repository, 就是用Docker Hub的.
-* build: 是指通过Dockerfile来构建。
+**如果本地有镜像, 直接用本地镜像**; 如果没有, 采用dockerhub的。
 
 ```docker-compose
 version: "3.7"
@@ -915,20 +923,26 @@ services:
 
 #### （2）build
 
+build: 是指通过Dockerfile来构建。当一个yaml文件中，既有image又有build时，它的顺序如下：
 
+- 首先看本地是否有镜像，如果有，用本地的镜像
+- 本地如果没有，尝试从dockerhub拉。
+- 如果dockerhub拉不到，则用build参数中指定的Dockerfile来构建镜像。
 
-#### （3）ports
+```yaml
+services:
+  backend:
+    image: awesome/database
+    build:
+      context: backend  # 相对docker-compose的子目录
+      dockerfile: ../backend.Dockerfile  # dockerfile文件名
+```
 
-* port: 8001:8000，当外部访问主机的8001端口时，主机将8001端口映射到容器的8000端口
+#### （3）depends_on
 
-* expose: expose暴露端口给link(下面会解释)到当前容器的容器
+告诉docker-compose当前服务**启动**之前先**要把depends_on指定的服务启动起来**才行
 
-#### （4）depends_on
-
-* depends_on: 定义服务之间的依赖关系，上面的例子中db服务启动顺序要优先于web服务
-* links: 当我们链接(links)容器时，docker会创建环境变量并将容器添加到已知主机列表中
-
-#### （5）environment
+#### （4）environment
 
 environment变量可以在构建镜像过程中，在Dockerfile中去使用。也可以在已构建好的镜像制作出的容器中使用，在容器的终端中输入`env`即可查找到所有的环境变量。可以用如下的python代码拿到具体的环境变量。
 
@@ -937,16 +951,12 @@ import os
 os.environ.get('DEBUG')
 ```
 
-#### (6) volume
+#### （5）volume
 
 docker的挂载主要有两种方式
 
 * bind mount(全路径的主机目录): 将主机的目录mount到container中，这种方式`主机的目录路径必须为全路径，否则docker会将其当做volume处理`。这种方式有一个不好的地方: windows和linux的目录结构不一样，那么此时我们是没法在不同的系统去写一个主机的目录来兼容的。
 * volume(非全路径的主机目录): volume和bind mount不同之处在于，volume的主机目录是被docker管理的，都在主机的`/var/lib/docker/volumes`目录下，这个目录的权限非常严格，即使是用`sudo`都不能打开(`cd`)。将my-volume挂载到container中的/mydata目录: `docker run -it -v my-volume:/mydata alpine sh`，它会在主机下创建`/var/lib/docker/volumes/my-volume/_data`目录，如果该目录不存在，那么docker会先创建然后再挂载。
-
-#### (7) command
-
-基本和`docker run`的`CMD`差不多，都是启动docker时执行的命令
 
 ## 五、docker swarm
 

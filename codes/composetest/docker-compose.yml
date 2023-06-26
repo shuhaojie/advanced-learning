@@ -1,6 +1,7 @@
 services:
   web:
     build: .
-    scale: 4
+    ports:
+      - "8000:5000"
   redis:
     image: "redis:alpine"
