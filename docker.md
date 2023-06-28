@@ -559,7 +559,7 @@ docker run -dit --name topdemo2 ubuntu:22.04 /usr/bin/top -b
 docker attach topdemo2
 ```
 
-### 10. 构建一个web服务器容器
+### 10. 构建web服务器容器
 
 - 拉取一个centos镜像，并启动一个centos容器
 
@@ -851,7 +851,7 @@ Hello World! I have been seen 1 times.
 
 由于是在服务器上部署，还可以在浏览器中访问http://121.36.104.55:8000/，也是一样的输出。注意，要开放8000端口。
 
-### 3. docker-compose的service
+### 3. service指令
 
 #### （1）service和container
 
@@ -927,7 +927,7 @@ build: 是指通过Dockerfile来构建。当一个yaml文件中，既有image又
 
 - 首先看本地是否有镜像，如果有，用本地的镜像
 - 本地如果没有，尝试从dockerhub拉。
-- 如果dockerhub拉不到，则用build参数中指定的Dockerfile来构建镜像。
+- 如果dockerhub拉不到，则用build参数中指定的Dockerfile来构建镜像。**build完之后，生成的镜像名称就是前面指定的**。
 
 ```yaml
 services:
@@ -960,79 +960,37 @@ docker的挂载主要有两种方式
 
 ## 五、docker swarm
 
-### 1. swarm 
+### 1. 基本概念
 
-#### （1）简介
+简单理解就是多台服务器搭建一个docker集群，每个服务器就是集群中的一个节点。
 
-Swarm(群)，由多个docker主机组成，包括manager和worker。
+- swarm：集群管理工具
+- node：节点，简单理解就是一台一台的机器，可以是客户机或者是虚拟机。
+- task：任务是swarm集群调度的最小单位。可以简单的理解为一个container容器。
+- service：服务service是指一组任务task的集合
 
-**服务(service)是docker swarm的操作单位，而不是容器**。当创建服务时，我们会定义其最佳状态（例如副本数）， docker 致力于维护所需的状态。例如，如果工作节点变得不可用，Docker 会在其他节点上安排该节点的任务(Task)。
+### 2. 常用命令
 
-**任务(Task)是一个正在运行的容器**，它是swarm服务的一部分，由swarm管理器管理，而不是一个独立的容器。
+#### （1）swarm命令
 
-#### （2）作用
+- docker swarm init：用于初始化 swarm，将当前节点作为 swarm 的管理节点。执行此命令后，系统会创建一个 swarm 集群，并生成一个 token，在其他节点上使用该 token 即可加入 swarm 集群。
+- docker swarm join：用于让节点加入到 swarm 集群中。需要提供一个 token，例如：docker swarm join --token xxxxx ip:port
 
-- swarm最大的优势是可以修改服务的配置，包括它所连接的网络和卷，而无需手动重启服务
+#### （2）service命令
 
-#### （3）swarm, stack, service, task, node
+- docker service create：用于在 swarm 中创建服务。可以指定副本数量、容器镜像、端口等参数。例如：docker service create --name myapp --replicas 5 -p 8080:80 nginx。
+- docker service ls：列出在 swarm 集群中的服务（service）。
+- Run `docker service inspect --pretty <SERVICE-ID>` to display the details about a service in an easily readable format.
+- docker service ps：**查看运行服务的节点**。
+- docker service scale：调整服务的副本数。
+- docker service update：调整服务的参数，例如镜像版本、环境变量等。例如：docker service update --image nginx:latest myapp。
+- docker service rm：删除服务
 
-- Dockerfile是用来构建镜像的，一个Dockerfile只能构建一个镜像
+#### （3）node命令
 
-- docker compose可以在单机上构建一组任务，可以管理多个容器
-- swarm是用来构建集群
-- stack是在集群的基础上管理容器，他可以操作多个service
+### 3. 集群部署
 
-- service是一组任务，包含多个镜像和容器，通常用于在集群的基础上管理容器
-- task是swarm中的原子调度单元，对应运行在一个service中的单个container
-
-- node是swarm中的节点概念，一个节点对应一台服务器。
-
-### 2. service
-
-![image-20230421210912517](/Users/haojie/Library/Application Support/typora-user-images/image-20230421210912517.png)
-
-应用程序的不同部分，称之为服务。**服务定义了一个镜像该如何运行的方法，如端口数，容器的个数(replicas)**，例如上图中service1，在节点1中需要两个image1，在节点2中需要一个image1。
-
-#### （1）部署服务
-
-```bash
-docker service create --replicas 1 --name helloworld alpine ping docker.com
-```
-
-- docker service create: 创建服务
-- --name：服务名称
-- --replicas：运行实例个数。一个服务可以有多个运行实例。
-- alpine ping docker.com：将服务定义为执行`ping docker.com`命令的Alpine Linux容器
-
-#### （2）查看服务
-
-```bash
-docker service ls # 查看所有服务
-docker service inspect --pretty helloworld  # 查看某个服务的细节，不加--pretty会返回json格式
-docker service ps helloworld  # 查看哪些节点在运行服务，有可能不在当前节点运行服务，此时需要ssh到对应机器上通过docker ps查看
-```
-
-#### （3）扩展服务
-
-```bash
-docker service scale helloworld=5  # 将服务扩展为5个，其实就是有5个运行的容器
-```
-
-#### （4）删除服务
-
-```bash
-docker service rm helloworld
-```
-
-### 3. docker-compose VS docker stack
-
-- docker stack和docker-compose一样，**都能操纵 compose.yml文件**，定义 services、volumes 、networks
-- docker-compose在单个docker引擎上编排服务，docker stack可以在多个docker引擎上编排服务
-- docker stack必须是在docker swarm模式中执行，并且只能在manager节点上执行。而如果开启了docker swarm模式，此时不建议用docker-compose。
-
-### 4. 使用docker swarm部署项目
-
-参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
+本次部署采用两台云服务器，华为云和阿里云，部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
 
 #### （1）开启swarm模式
 
@@ -1064,16 +1022,16 @@ firewall-cmd --reload
       app.run(host="0.0.0.0", port=8000, debug=True)
   ```
 
-  - Dockerfile
+- Dockerfile
 
-    ```dockerfile
-    # syntax=docker/dockerfile:1
-    FROM python:3.4-alpine
-    ADD . /code
-    WORKDIR /code
-    RUN pip install -r requirements.txt
-    CMD ["python", "app.py"]
-    ```
+  ```dockerfile
+  # syntax=docker/dockerfile:1
+  FROM python:3.4-alpine
+  ADD . /code
+  WORKDIR /code
+  RUN pip install -r requirements.txt
+  CMD ["python", "app.py"]
+  ```
 
   - requirements.txt
 
