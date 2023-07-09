@@ -93,7 +93,7 @@ sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/dock
 
 ```bash
 # 安装docker
-sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose.yml-plugin
+sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 # 启动docker
 sudo systemctl start docker
 # 测试是否安装完成
@@ -990,7 +990,7 @@ docker的挂载主要有两种方式
 
 ### 3. 集群部署
 
-本次部署采用两台云服务器，华为云和阿里云，部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
+本次部署采用两台云服务器，华为云和阿里云，集群节点之间保证TCP 2377、TCP/UDP 7946和UDP 4789端口通信。部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
 
 #### （1）开启swarm模式
 
