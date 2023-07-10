@@ -969,6 +969,8 @@ docker的挂载主要有两种方式
 - task：任务是swarm集群调度的最小单位。可以简单的理解为一个container容器。
 - service：服务service是指一组任务task的集合
 
+
+
 ### 2. 常用命令
 
 #### （1）swarm命令
@@ -987,6 +989,8 @@ docker的挂载主要有两种方式
 - docker service rm：删除服务
 
 #### （3）node命令
+
+- docker node ls：显示节点信息
 
 ### 3. 集群部署
 
