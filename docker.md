@@ -969,7 +969,11 @@ docker的挂载主要有两种方式
 - task：任务是swarm集群调度的最小单位。可以简单的理解为一个container容器。
 - service：服务service是指一组任务task的集合
 
-### 2. 常用命令
+### 2. 理解service
+
+参考 https://docs.docker.com/engine/swarm/how-swarm-mode-works/services/
+
+### 3. 常用命令
 
 #### （1）swarm命令
 
@@ -988,7 +992,18 @@ docker的挂载主要有两种方式
 
 #### （3）node命令
 
-### 3. 集群部署
+- docker node ls
+
+```bash
+[haojie@manager ~]$ docker node ls
+ID                            HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+02i3kcyu0b38qqmqsxjyhgee0 *   manager    Ready     Active         Leader           24.0.2
+iib016mutslhhj63o482zx3ce     node01     Ready     Active                          18.06.3-ce
+```
+
+- 
+
+### 4. 集群部署
 
 本次部署采用两台云服务器，华为云和阿里云，集群节点之间保证TCP 2377、TCP/UDP 7946和UDP 4789端口通信。部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
 
