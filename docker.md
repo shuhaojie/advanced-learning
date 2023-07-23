@@ -1,4 +1,4 @@
-# docker
+#  docker
 
 ## 一、安装docker
 
@@ -859,7 +859,7 @@ Hello World! I have been seen 1 times.
 
 > A service can be run by one or multiple containers. With `docker` you can handle containers and with `docker-compose` you can handle services.
 
-service可以由一个或多个container组成。docker一般来操作container，docker-compose一般来操作service。可以在docker-      compose中指定scale参数来指定container的个数，例如
+service可以由一个或多个container组成。docker一般来操作container，docker-compose一般来操作service。可以在docker-compose中指定scale参数来指定container的个数，例如
 
 ```yaml
 services:
@@ -962,7 +962,7 @@ docker的挂载主要有两种方式
 
 ### 1. 基本概念
 
-简单理解就是多台服务器搭建一个docker集群，每个服务器就是集群中的一个节点。
+简单理解就是多台服务器搭建一个docker集群，每个服务器就是集群中的一个节点。swarm集群中有很多重要的概念，以上是它们的简单介绍。
 
 - swarm：集群管理工具
 - node：节点，简单理解就是一台一台的机器，可以是客户机或者是虚拟机。
@@ -972,6 +972,22 @@ docker的挂载主要有两种方式
 ### 2. 理解service
 
 参考 https://docs.docker.com/engine/swarm/how-swarm-mode-works/services/
+
+#### （1）对服务的理解
+
+**当我们在集群模式构建应用时，我们需要创建一个服务**。服务这个概念在docker-compose中就有，**服务是由一组容器组成**，在docker-compose中我们也可以指定容器个数。当我们创建一个服务时，我们通常会指定如下东西：
+
+- 该服务要使用的镜像
+- 在容器内要执行的命令
+- swarm外部访问服务时的端口
+- swarm内部连接其他服务的覆盖网络
+- CPU，内存等的限制和保留
+- 滚动更新策略
+- 要在集群中运行的镜像的副本数量
+
+> 后续补充yml
+
+#### （2）service，task和container
 
 ### 3. 常用命令
 
@@ -1001,11 +1017,47 @@ ID                            HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS
 iib016mutslhhj63o482zx3ce     node01     Ready     Active                          18.06.3-ce
 ```
 
-- 
+- docker node inspect 
+
+```bash
+[haojie@manager composetest]$ docker node inspect node01
+[
+    {
+        "ID": "iib016mutslhhj63o482zx3ce",
+        "Version": {
+            "Index": 44
+        },
+        "CreatedAt": "2023-07-03T07:25:09.750149551Z",
+        "UpdatedAt": "2023-07-09T13:22:51.706956071Z",
+        "Spec": {
+            "Labels": {},
+            "Role": "worker",
+            "Availability": "active"
+        },
+        "Description": {
+            "Hostname": "node01",
+            "Platform": {
+                "Architecture": "x86_64",
+                "OS": "linux"
+            },
+            "Resources": {
+                "NanoCPUs": 2000000000,
+                "MemoryBytes": 2095804416
+            },
+            "Engine": {
+                "EngineVersion": "18.06.3-ce",
+            },
+        "Status": {
+            "State": "ready",
+            "Addr": "43.143.70.145"
+        }
+    }
+]
+```
 
 ### 4. 集群部署
 
-本次部署采用两台云服务器，华为云和阿里云，集群节点之间保证TCP 2377、TCP/UDP 7946和UDP 4789端口通信。部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
+本次部署采用两台云服务器，华为云和阿里云，集群节点之间保证TCP 2377、TCP/UDP 7946和UDP 4789端口通信，另外本程序需要8000和6379端口，也需要放开。部署参考官方文档https://docs.docker.com/engine/swarm/stack-deploy/
 
 #### （1）开启swarm模式
 
@@ -1048,35 +1100,32 @@ firewall-cmd --reload
   CMD ["python", "app.py"]
   ```
 
-  - requirements.txt
+- requirements.txt
 
-    ```txt
-    flask
-    redis
-    ```
+  ```txt
+  flask
+  redis
+  ```
 
-  - docker-compose.yml
+- docker-compose.yml
 
-    ```yml
-    version: "3.9"
-    
-    services:
-      web:
-        image: shuhaojie/stackdemo:latest
-        build: .
-        ports:
-          - "8000:8000"
-      redis:
-        image: redis:alpine
-    ```
+  ```yml
+  version: "3.9"
+  
+  services:
+    web:
+      image: shuhaojie/stackdemo:latest
+      build: .
+      ports:
+        - "8000:8000"
+    redis:
+      image: redis:alpine
+  ```
 
 #### （3）构建镜像
 
 - 构建镜像，`docker-compose up -d`: **既会构建镜像，也会去启动容器**。
-- 查看镜像状态，`docker-compose ps`
-- 关闭`compose`, `docker-compose down --volumes`
-
-- 将构建好的镜像推到临时仓库：`docker-compose push`
+- 将构建好的镜像推到仓库：`docker-compose push`
 
 #### （4）构建栈
 
@@ -1084,19 +1133,3 @@ firewall-cmd --reload
 - 查看栈中的服务状态：`docker stack services stackdemo`，查看由stackdemo这个栈创建的服务
 
 - 测试manager节点：`curl http://localhost:8000`
-
-#### （5）加入worker节点
-
-- 首先确保可以从虚拟机ssh到mac，需要在mac上开启允许ssh，详情<https://support.apple.com/zh-sg/guide/mac-help/mchlp1066/mac>
-
-- 用mac作为从节点，下面具体的命令在`docker swarm join-token worker`，可以看到如下命令
-
-  ```bash
-  docker swarm join --token SWMTKN-1-0k7mff4t95pbe8lzn08omjfs66d1xrgu733vxa8bhsicp3e6v0-cyyjmzydwmzwsmiwuk7831uon 172.16.94.129:2377
-  ```
-
-- 查看所有节点：`docker node ls`
-
-- 在虚拟机上给mac发HTTP请求，`curl http://address-of-other-node:8000`
-
-> 目前报错 - curl: (52) Empty reply from server
