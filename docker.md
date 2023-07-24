@@ -1017,7 +1017,42 @@ To add a manager to this swarm, run 'docker swarm join-token manager' and follow
 
 #### （2）stack命令
 
+- docker stack deploy：创建一个stack
 
+```bash
+[haojie@manager composetest]$ docker stack deploy -c docker-compose.yml demo
+Ignoring unsupported options: build
+
+Creating network demo_default
+Creating service demo_web
+Creating service demo_redis
+```
+
+- docker stack ls：查看有哪些stack
+
+```bash
+[haojie@manager composetest]$ docker stack ls
+NAME                SERVICES            ORCHESTRATOR
+demo                2                   Swarm
+```
+
+- docker stack ps：查看stack中的tasks
+
+```bash
+[haojie@manager composetest]$ docker stack ps demo
+ID                  NAME                IMAGE                        NODE                DESIRED STATE       CURRENT STATE           ERROR               PORTS
+g7j9y5ze6oub        demo_redis.1        redis:alpine                 manager             Running             Running 2 minutes ago
+qnisl5mvxfup        demo_web.1          shuhaojie/stackdemo:latest   manager             Running             Running 2 minutes ago
+```
+
+- docker stack services：查看stack的services
+
+```bash
+[haojie@manager composetest]$ docker stack services demo
+ID                  NAME                MODE                REPLICAS            IMAGE                        PORTS
+9bjq19vhbbf0        demo_redis          replicated          1/1                 redis:alpine
+n2p6kpkz1fc8        demo_web            replicated          1/1                 shuhaojie/stackdemo:latest   *:8000->8000/tcp
+```
 
 #### （3）service命令
 
@@ -1072,7 +1107,7 @@ is9qav2zozl3        myapp               replicated          5/5                 
 ]
 ```
 
-- docker service ps：**查看运行服务的节点**。
+- docker service ps：**查看运行服务的节点**。这里的id和name表示的是task，而不是container。
 
 ```bash
 [haojie@node01 ~]$ docker service ps myapp
