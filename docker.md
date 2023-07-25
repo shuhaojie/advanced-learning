@@ -1056,7 +1056,7 @@ n2p6kpkz1fc8        demo_web            replicated          1/1                 
 
 #### （3）service命令
 
-- docker service create：用于在 swarm 中创建服务。可以指定副本数量、容器镜像、端口等参数。例如：docker service create --name myapp --replicas 5 -p 8080:80 nginx。
+- docker service create：用于在 swarm 中创建服务。可以指定副本数量、容器镜像、端口等参数。例如：docker service create --name myapp --replicas 5 -p 8080:80 nginx
 
 ```bash
 [haojie@node01 ~]$ docker service create --name myapp --replicas 5 -p 8080:80 nginx
@@ -1146,6 +1146,8 @@ overall progress: 2 out of 2 tasks
 verify: Service converged
 ```
 
+
+
 - docker service rm：删除服务
 
 ```bash
@@ -1201,6 +1203,22 @@ iib016mutslhhj63o482zx3ce     node01     Ready     Active                       
         }
     }
 ]
+```
+
+- docker node update --label-add：给node打标签
+
+```bash
+[haojie@manager ~]$ docker node update --label-add worker node01
+node01
+```
+
+此时再查看节点，可以看到
+
+```bash
+[haojie@manager ~]$ docker node inspect node01 --pretty
+ID:			iib016mutslhhj63o482zx3ce
+Labels:
+ - worker
 ```
 
 ### 4. 集群部署
