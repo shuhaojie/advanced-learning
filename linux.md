@@ -493,7 +493,11 @@ master
 ping [-c num] ip或主机名
 ```
 
-#### （2）wget
+#### （2）telnet
+
+
+
+#### （3）wget
 
 在命令行内下载网络文件
 
@@ -502,7 +506,7 @@ ping [-c num] ip或主机名
 wget [-b] url
 ```
 
-#### （3）curl
+#### （4）curl
 
  curl可以发送http网络请求，可用于下载文件、获取信息等
 
