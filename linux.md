@@ -489,17 +489,14 @@ ps [-e -f]
 一般来说，经常用`ps -ef`，列出进程的全部信息
 
 ```bash
-[haojie@localhost ~]$ ps -ef
+[haojie@manager ~]$ ps -ef | grep python
 UID         PID   PPID  C STIME TTY          TIME CMD
-root          1      0  0 19:49 ?        00:00:02 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
-root          2      0  0 19:49 ?        00:00:00 [kthreadd]
-root          4      2  0 19:49 ?        00:00:00 [kworker/0:0H]
-root          6      2  0 19:49 ?        00:00:01 [ksoftirqd/0]
-root          7      2  0 19:49 ?        00:00:00 [migration/0]
-root          8      2  0 19:49 ?        00:00:00 [rcu_bh]
-root          9      2  0 19:49 ?        00:00:01 [rcu_sched]
-root         10      2  0 19:49 ?        00:00:00 [lru-add-drain]
-haojie    52310   2476  0 20:59 pts/0    00:00:00 ps -ef
+root       603     1  0 6月27 ?       00:03:31 /usr/bin/python2 -Es /usr/sbin/tuned -l -P
+root      7458  7439  0 11:27 ?        00:00:00 python app.py
+root      7528  7458  0 11:27 ?        00:01:08 /usr/local/bin/python /code/app.py
+haojie   15480 15443  0 17:12 pts/2    00:00:00 grep --color=auto python
+root     17448     1  0 7月09 ?       00:00:00 python app.py
+root     17517 17448  0 7月09 ?       01:30:10 /usr/local/bin/python /code/app.py
 ```
 
 从左到右分别是
@@ -514,6 +511,18 @@ haojie    52310   2476  0 20:59 pts/0    00:00:00 ps -ef
 - CMD：进程的启动命令
 
 > 在服务器上开启一个进程，保持终端关闭后进程仍然运行，可以使用`nohup command &`
+
+另外一种查看进程的方式是ps -aux
+
+```bash
+[haojie@manager ~]$ ps -aux | grep python
+root       603  0.0  0.4 574288 17456 ?        Ssl  6月27   3:31 /usr/bin/python2 -Es /usr/sbin/tuned -l -P
+root      7458  0.0  0.5  24712 21412 ?        Ss   11:27   0:00 python app.py
+root      7528  0.3  1.5  63076 58412 ?        Sl   11:27   1:08 /usr/local/bin/python /code/app.py
+haojie   15472  0.0  0.0 112828   988 pts/2    S+   17:11   0:00 grep --color=auto python
+root     17448  0.0  0.5  24668 21192 ?        Ss   7月09   0:00 python app.py
+root     17517  0.3  0.5  25988 21632 ?        Sl   7月09  90:10 /usr/local/bin/python /code/app.py
+```
 
 #### （2）关闭进程
 
