@@ -1,8 +1,8 @@
 # Linux
 
-## 一、命令基础
+## 一、基础命令
 
-### 1. 通用格式
+linux命令的通用格式如下
 
 ```bash
 command [-options] [parameter]
@@ -12,7 +12,7 @@ command [-options] [parameter]
 - options：可选选项，控制命令的行为细节
 - parameter：可选参数，控制命令的指向目标
 
-### 2. ls
+### 1. ls
 
 ```bash
 ls [-a -l -h] [linux路径]
@@ -25,7 +25,7 @@ ls [-a -l -h] [linux路径]
 - `-l`：以列表形式竖向展示，并展示更多信息
 - `-h`：以更加人性化的方式展示文件的大小单位
 
-### 3. mkdir
+### 2. mkdir
 
 ```bash
 mkdir -p linux路径
@@ -33,13 +33,13 @@ mkdir -p linux路径
 
 - -p：一次性创建多个层级的目录
 
-### 4. touch, cat, more
+### 3. touch, cat, more
 
 - `touch linux路径`：创建文件
 - `cat linux路径`：查看文件内容
 - `more linux路径`：查看文件内容，可翻页查看
 
-### 5. cp, mv, rm
+### 4. cp, mv, rm
 
 #### （1）cp
 
@@ -70,7 +70,7 @@ rm [-r -f] 参数1 参数2 ....参数n
 - -f：强制删除，force
 - 参数1，参数2....参数n，要删除的文件或文件夹
 
-### 6. which, find
+### 5. which, find
 
 #### （1）which
 
@@ -113,7 +113,7 @@ find / size -10k # 查找小于10k的文件
 find / size +20M # 查找大于20M的文件
 ```
 
-### 7. grep, wc, 管道符
+### 6. grep, wc, 管道符
 
 #### （1）grep
 
@@ -181,7 +181,7 @@ centos              latest              5d0da3dc9764        20 months ago       
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 ```
 
-### 8. echo, tail, 重定向符
+### 7. echo, tail, 重定向符
 
 #### （1）echo
 
@@ -227,7 +227,7 @@ ls > hello.txt # 将ls的内容覆盖写入到文件中
 tail [-f -num] linux路径
 ```
 
-### 9. vi编辑器
+### 8. vi
 
 命令模式快捷键
 
@@ -249,7 +249,7 @@ G: 跳到尾行
 
 ## 二、linux用户
 
-### 1. root用户
+### 1. 切换用户
 
 - `su`: switch user，切换用户。不仅仅可以切换到root用户，也可以切换到其他用户。
 
@@ -361,83 +361,9 @@ chown root hello.txt  # 文件所属用户修改为root
 chown :root hello.txt # 文件所属用户组修改为root
 ```
 
-## 三、linux软件
+## 三、linux网络
 
-### 1. 小技巧快捷键
-
-- ctrl+d: 退出某些程序的专属页面，例如mysql或者python
-- history：查看历史命令
-- ctrl+r：通过关键字搜索命令
-
-​	<img src="./assets/image-20230524100454944.png" alt="image-20230524100454944" style="zoom:50%;" /> 
-
-- ctrl+a：跳到命令开头
-- ctrl+e：跳到命令结尾
-- ctrl+键盘左键：左跳一个单词
-- ctrl+键盘右键：右跳一个单词
-- ctrl+l：清屏，等于clear
-
-### 2. 软件安装
-
-```bash
-# -y: 自动确认, 无需手动确认或卸载过程
-yum [-y] [install | remove | search] 软件名称
-```
-
-注意：
-
-- yum需要root用户权限
-- yum需要联网
-
-### 3. systemctl命令
-
-Linux系统很多软件（内置或第三方）均支持使用systemnctl命令控制：启动、停止、开机自启。**能够被systemctl管理的软件，一般也称之为：服务。**
-
-```bash
-systemctl start ｜ stop ｜ status ｜ enable ｜ disable 服务名
-```
-
-- start启动 
-
-- stop 关闭
-
-- status：查看状态
-
-- enable：开启开机自启
-- disable 关闭开机自启
-
-系统内置的服务比较多，比如：
-
-- NetworkManager，主网络服务
-- network，副网络服务
-- firewalld，防火墙服务
-- sshd，ssh服务（FinalShell远程登录Linux使用的就是这个服务） 
-
-### 4. 软链接
-
-```bash
-# 参数1: 被链接的文件或文件夹
-# 参数2: 要链接去的目的地
-ln -s 参数1 参数2 
-```
-
-### 5. 日期和地区
-
-```
-date [-d] [格式化字符串] 
-```
-
-ntp程序可以自动校准系统时间
-
-```bash
-yum -y install ntp
-systemctl start ntp
-systemctl enable ntp
-```
-
-## 四、网络
-
-### 1. ip地址和主机名
+### 1. ip地址
 
 #### （1）特殊ip地址
 
@@ -456,25 +382,9 @@ eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 13105971  bytes 2528117760 (2.3 GiB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-
-lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
-        inet 127.0.0.1  netmask 255.0.0.0
-        inet6 ::1  prefixlen 128  scopeid 0x10<host>
-        loop  txqueuelen 1000  (Local Loopback)
-        RX packets 2756  bytes 147498 (144.0 KiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 2756  bytes 147498 (144.0 KiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-#### （3）主机名
-
-```bash
-[haojie@master ~]$ hostname
-master
-```
-
-#### （4）域名解析
+#### （3）域名解析
 
 ![image-20230527101040796](assets/image-20230527101040796.png)
 
@@ -483,19 +393,59 @@ master
 1. 先查看本机是否有该域名的记录，`etc/hosts`
 2. 如果第一步没有，再联网去DNS服务器(114.114.114，8.8.8.8)询问
 
-### 2. 网络请求
+### 2. 端口
+
+#### （1）端口的定义
+
+![image-20230527103954621](assets/image-20230527103954621.png)
+
+计算机程序之间的通讯，通过IP只能锁定计算机，但是无法锁定具体的程序。通过端口可以锁定计算机上具体的程序，确保程序之间进行沟通。IP地址相当于小区地址，在小区内可以有许多住户(程序)，而门牌号(端口)就是各个住户(程序)的联系地址。
+
+#### （2）lsof命令
+
+查看端口占用情况，注意，该命令需要用root用户
+
+```bash
+[haojie@manager ~]$ sudo lsof -i:8000
+COMMAND   PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+dockerd 13841 root   47u  IPv6 5149361      0t0  TCP *:irdmi (LISTEN)
+```
+
+#### （3）netstat命令
+
+netstat查看端口占用，需要安装`yum -y install net-tools`
+
+```bash
+[haojie@manager ~]$ sudo netstat -tunlp | grep 8000
+tcp6       0      0 :::8000                 :::*                    LISTEN      13841/dockerd
+```
+
+### 3. 网络请求
 
 #### （1）ping
 
 检查指定的网络服务器是否连通
 
 ```bash
-ping [-c num] ip或主机名
+[haojie@manager ~]$ ping baidu.com
+PING baidu.com (110.242.68.66) 56(84) bytes of data.
+64 bytes from 110.242.68.66 (110.242.68.66): icmp_seq=1 ttl=48 time=11.1 ms
+64 bytes from 110.242.68.66 (110.242.68.66): icmp_seq=2 ttl=48 time=11.0 ms
+--- baidu.com ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2002ms
+rtt min/avg/max/mdev = 10.952/11.022/11.111/0.108 ms
 ```
 
 #### （2）telnet
 
+用于检查服务器上是否打开特定端口，这个服务器可以是别人的服务器，例如检查百度的服务器是否开放
 
+```bash
+[haojie@manager ~]$ telnet 110.242.68.66 443
+Trying 110.242.68.66...
+Connected to 110.242.68.66.
+Escape character is '^]'.
+```
 
 #### （3）wget
 
@@ -522,68 +472,9 @@ curl [-O] url
 IP	: 123.118.73.58
 地址	: 中国  北京
 运营商	: 联通
-
-数据二	: 北京市 | 联通
-
-数据三	: 中国北京北京市 | 联通
-
-URL	: http://www.cip.cc/123.118.73.58
 ```
 
-### 3. 端口
-
-#### （1）端口的定义
-
-端口是设备与外界通讯交流的出入口，端口分为物理端口和虚拟端口
-
-- 物理端口：USB接口，HDMI接口
-- 虚拟端口：计算机内部的接口，是操作系统和外部进行交互使用的
-
-![image-20230527103954621](assets/image-20230527103954621.png)
-
-计算机程序之间的通讯，通过IP只能锁定计算机，但是无法锁定具体的程序。通过端口可以锁定计算机上具体的程序，确保程序之间进行沟通。IP地址相当于小区地址，在小区内可以有许多住户(程序)，而门牌号(端口)就是各个住户(程序)的联系地址。
-
-#### （2）查看端口占用
-
-```bash
-nmap IP地址
-```
-
-例如
-
-```bash
-[haojie@localhost ~]$ nmap 127.0.0.1
-
-Starting Nmap 6.40 ( http://nmap.org ) at 2023-05-26 20:13 PDT
-Nmap scan report for localhost (127.0.0.1)
-Host is up (0.00030s latency).
-Not shown: 996 closed ports
-PORT    STATE SERVICE
-22/tcp  open  ssh
-25/tcp  open  smtp
-111/tcp open  rpcbind
-631/tcp open  ipp
-
-Nmap done: 1 IP address (1 host up) scanned in 0.06 seconds
-```
-
-#### （3）netstat命令
-
-netstat查看端口占用，安装`yum -y install net-tools`
-
-```bash
-netstat -anp | grep 端口号
-```
-
-#### （4）lsof命令
-
-lsof命令也是查看端口占用
-
-```bash
-lsof -i:80 
-```
-
-## 五、linux状态
+## 四、linux状态
 
 ### 1. 进程管理
 
@@ -731,7 +622,7 @@ Mem:           2.0G        313M         80M        1.0M        1.6G        1.5G
 Swap:            0B          0B          0B
 ```
 
-## 六、环境变量
+## 五、环境变量
 
 ### 1. 查看环境变量
 
@@ -781,7 +672,7 @@ export 变量名=变量值
 
 - 针对所有用户：修改`/etc/profile`文件
 
-## 七、文件操作
+## 六、文件操作
 
 ### 1. 文件上传、下载
 
@@ -846,3 +737,73 @@ Archive:  test.zip
    creating: /home/haojie/jieya/Videos/
 ```
 
+## 七、linux软件
+
+### 1. 快捷键
+
+- ctrl+d: 退出某些程序的专属页面，例如mysql或者python
+- history：查看历史命令
+
+- ctrl+a：跳到命令开头
+- ctrl+e：跳到命令结尾
+- ctrl+键盘左键：左跳一个单词
+- ctrl+键盘右键：右跳一个单词
+- ctrl+l：清屏，等于clear
+
+### 2. 软件安装
+
+```bash
+# -y: 自动确认, 无需手动确认或卸载过程
+yum [-y] [install | remove | search] 软件名称
+```
+
+注意：
+
+- yum需要root用户权限
+- yum需要联网
+
+### 3. systemctl命令
+
+Linux系统很多软件（内置或第三方）均支持使用systemnctl命令控制：启动、停止、开机自启。**能够被systemctl管理的软件，一般也称之为：服务。**
+
+```bash
+systemctl start ｜ stop ｜ status ｜ enable ｜ disable 服务名
+```
+
+- start启动 
+
+- stop 关闭
+
+- status：查看状态
+
+- enable：开启开机自启
+- disable 关闭开机自启
+
+系统内置的服务比较多，比如：
+
+- NetworkManager，主网络服务
+- network，副网络服务
+- firewalld，防火墙服务
+- sshd，ssh服务（FinalShell远程登录Linux使用的就是这个服务） 
+
+### 4. 软链接
+
+```bash
+# 参数1: 被链接的文件或文件夹
+# 参数2: 要链接去的目的地
+ln -s 参数1 参数2 
+```
+
+### 5. 日期和地区
+
+```
+date [-d] [格式化字符串] 
+```
+
+ntp程序可以自动校准系统时间
+
+```bash
+yum -y install ntp
+systemctl start ntp
+systemctl enable ntp
+```
