@@ -300,7 +300,7 @@ $ sudo vim /etc/kubernetes/manifests/etcd.yaml
 
 将
 
-```
+```bash
 - --listen-client-urls=https://127.0.0.1:2379,https://101.34.112.190:2379    
 - --listen-peer-urls=https://101.34.112.190:2380
 ```
@@ -366,7 +366,40 @@ kubeadm join 121.36.104.55:6443 --token abcdef.0123456789abcdef \
     --discovery-token-ca-cert-hash sha256:af2a6e096cb404da729ef3802e77482f0a8a579fa602d7c071ef5c5415aac748
 ```
 
-此时执行`kubeadm get nodes`可以看到两个节点都加入进去了
+此时执行`kubectl get nodes`可以看到两个节点都加入进去了
+
+```bash
+[haojie@manager ~]$ kubectl get nodes
+NAME      STATUS     ROLES                  AGE   VERSION
+manager   NotReady   control-plane,master   13h   v1.22.4
+node01    NotReady   <none>                 12h   v1.22.4
+```
+
+此时状态都还是NotReady，需要安装插件。
+
+#### （4）网络插件安装
+
+在master节点执行下面操作即可
+
+```bash
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+```
+
+等几分钟，就会发现状态变成Ready了
+
+#### （5）创建必要文件
+
+这个文件是`kubectl`命令要读取的配置文件
+
+```bash
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+#### （6）环境测试
+
+
 
 ## 三、资源管理
 

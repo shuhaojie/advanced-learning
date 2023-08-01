@@ -376,12 +376,7 @@ chown :root hello.txt # 文件所属用户组修改为root
 [haojie@master ~]$ ifconfig
 eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         inet 10.0.4.11  netmask 255.255.252.0  broadcast 10.0.7.255
-        inet6 fe80::5054:ff:fefe:3906  prefixlen 64  scopeid 0x20<link>
-        ether 52:54:00:fe:39:06  txqueuelen 1000  (Ethernet)
-        RX packets 14680852  bytes 4330773676 (4.0 GiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 13105971  bytes 2528117760 (2.3 GiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+				.......
 ```
 
 #### （3）域名解析
@@ -420,7 +415,63 @@ netstat查看端口占用，需要安装`yum -y install net-tools`
 tcp6       0      0 :::8000                 :::*                    LISTEN      13841/dockerd
 ```
 
-### 3. 网络请求
+### 3. 防火墙
+
+#### （1）作用
+
+防火墙的作用是内部网络和外部网络隔离。通常，防火墙可以保护内部/私有局域网免受外部攻击，并防止重要数据泄露。
+
+<img src="assets/image-20230731145544911.png" alt="image-20230731145544911" style="zoom:40%;" />
+
+#### （2）firewall防火墙
+
+CentOS7 默认使用firewalld防火墙，如果想换回iptables防火墙，可关闭firewalld并安装iptables。
+
+- 查看防火墙状态
+
+```bash
+firewall-cmd --state  # 关闭后显示notrunning，开启后显示running
+```
+
+- 关闭防火墙
+
+```bash
+systemctl stop firewalld
+```
+
+- 启动防火墙
+
+```bash
+systemctl start firewalld
+```
+
+#### （3）iptables防火墙
+
+- 查看防火墙状态
+
+```bash
+service iptables status
+```
+
+- 停止防火墙
+
+```bash
+service iptables stop 
+```
+
+- 启动防火墙
+
+```bash
+service iptables start
+```
+
+- 重启防火墙
+
+```bash
+service iptables restart
+```
+
+### 4. 网络请求
 
 #### （1）ping
 
@@ -473,6 +524,29 @@ IP	: 123.118.73.58
 地址	: 中国  北京
 运营商	: 联通
 ```
+
+### 5. 经典问题
+
+在k8s中，启动了nginx服务，按照教程，开放了外部的31724端口
+
+```bash
+[haojie@manager ~]$ kubectl get service
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        18h
+nginx        NodePort    10.102.148.40   <none>        80:31724/TCP   4h12m
+```
+
+用lsof或者netstat查看端口占用情况，均显示端口被监听
+
+```bash
+[haojie@manager ~]$ sudo netstat -tunlp | grep 31724
+tcp        0      0 0.0.0.0:31724           0.0.0.0:*               LISTEN      27205/kube-proxy
+[haojie@manager ~]$ sudo lsof -i:31724
+COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
+```
+
+
 
 ## 四、linux状态
 
