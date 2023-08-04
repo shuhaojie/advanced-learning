@@ -546,7 +546,14 @@ COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
 kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
 ```
 
+但是在本机或者其他机器上使用telnet命令，并没有通
 
+```bash
+[haojie@manager ~]$ telnet 127.0.0.1 31724
+Trying 127.0.0.1...
+[haojie@node01 ~]$ telnet 121.36.104.55 31724
+Trying 121.36.104.55...
+```
 
 ## 四、linux状态
 
@@ -868,6 +875,12 @@ systemctl start ｜ stop ｜ status ｜ enable ｜ disable 服务名
 - network，副网络服务
 - firewalld，防火墙服务
 - sshd，ssh服务（FinalShell远程登录Linux使用的就是这个服务） 
+
+可以用如下命令查看所有允许的服务
+
+```bash
+systemctl list-unit-files | grep enabled
+```
 
 ### 4. 软链接
 

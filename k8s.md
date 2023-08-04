@@ -98,7 +98,7 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - kubeadm：搭建kubenetes集群的工具
 - 二进制包：依次下载每个组件的二进制包
 
-这里采用第二种方式，并且采用两台服务器，阿里云(centos)和腾讯云(centos)。
+这里采用第二种方式，并且采用两台服务器，华为云(centos)和腾讯云(centos)。
 
 ### 2. 环境初始化
 
@@ -399,7 +399,54 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 #### （6）环境测试
 
+- 部署nginx
 
+```bash
+kubectl create deployment nginx --image=nginx:1.14-alpne
+```
+
+- 暴露端口
+
+```bash
+kubectl expose deployment nginx --port=80 --type=NodePort
+```
+
+- 查看服务状态
+
+```bash
+# 注意","两边不要有空格
+[haojie@manager ~]$ kubectl get pods,service
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/nginx-65c4bffcb6-872tv   1/1     Running   0          2d4h
+
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        2d18h
+service/nginx        NodePort    10.102.148.40   <none>        80:31724/TCP   2d4h
+```
+
+- 在页面上查看nginx服务
+
+目前这里有个问题，可以通过腾讯云的ip+port访问，但是不能通过华为云的ip+port访问。服务是分配给了腾讯云，但是无论是k8s，还是swarm都可以端口共享，应该不存在这个问题。
+
+腾讯云
+
+<img src="assets/image-20230802195746309.png" alt="image-20230802195746309" style="zoom:50%;" />
+
+华为云：端口30161暴露了
+
+```bash
+[haojie@manager ~]$ sudo lsof -i:30161
+COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
+```
+
+但是telnet 30161这个端口不通
+
+```bash
+[haojie@node01 ~]$ telnet 121.36.104.55 30161
+Trying 121.36.104.55...
+telnet: connect to address 121.36.104.55: Connection timed out
+```
 
 ## 三、资源管理
 
@@ -593,6 +640,41 @@ kubectl create ns default
 ```
 kubectl delete ns default
 ```
+
+#### （5）指定Namespace
+
+当我们查询资源时，如果不指定`-n namespace`，**那么它默认使用的是default这个namespace**
+
+```bash
+[haojie@manager ~]$ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-6799fc88d8-vljg6   1/1     Running   0          12m
+[haojie@manager ~]$ kubectl get pods -n default
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-6799fc88d8-vljg6   1/1     Running   0          15m
+```
+
+而系统则有一些pods
+
+```bash
+[haojie@manager ~]$ kubectl get pods -n kube-system
+NAME                                       READY   STATUS    RESTARTS       AGE
+calico-kube-controllers-5d4b78db86-kknjm   1/1     Running   21 (47m ago)   2d5h
+calico-node-jhtql                          0/1     Running   0              2d5h
+calico-node-xd7xq                          0/1     Running   0              2d5h
+coredns-7f6cbbb7b8-2sc94                   1/1     Running   0              2d19h
+coredns-7f6cbbb7b8-fft6q                   1/1     Running   0              2d19h
+etcd-manager                               1/1     Running   1              2d19h
+kube-apiserver-manager                     1/1     Running   19 (48m ago)   2d19h
+kube-controller-manager-manager            1/1     Running   4 (99m ago)    2d19h
+kube-proxy-4sv7s                           1/1     Running   0              2d19h
+kube-proxy-dtj72                           1/1     Running   0              2d18h
+kube-scheduler-manager                     1/1     Running   4 (99m ago)    2d19h
+```
+
+
+
+
 
 ### 2. Pod
 
