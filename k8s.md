@@ -74,7 +74,7 @@ kubernetes的最小控制单元，容器都是运行在pod中的，一个pod中�
 
 #### （4）Controller
 
-pod虽然是k8s的最小控制单元，但是k8s很少直接控制pod。而是通过控制器来实现对pod的管理，比如启动pod、停止pod、伸缩pod的数量等等。
+pod虽然是k8s的最小控制单元，但是k8s很少直接控制pod。而是通过控制器来实现对pod的管理，比如启动pod、停止pod、伸缩pod的数量等等。k8s中最常见的控制器是：Deployment
 
 #### （5）Service
 
@@ -671,10 +671,6 @@ kube-proxy-4sv7s                           1/1     Running   0              2d19
 kube-proxy-dtj72                           1/1     Running   0              2d18h
 kube-scheduler-manager                     1/1     Running   4 (99m ago)    2d19h
 ```
-
-
-
-
 
 ### 2. Pod
 
