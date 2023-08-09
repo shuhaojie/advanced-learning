@@ -433,6 +433,15 @@ node01    NotReady   <none>                 12h   v1.22.4
   value: "10.244.0.0/16"
 ```
 
+并新增
+
+```yaml
+- name: CLUSTER_TYPE
+  value: "k8s,bgp"
+- name: IP_AUTODETECTION_METHOD  # 新增
+  value: "interface=eth1" # 新增
+```
+
 执行文件
 
 ```bash
@@ -442,7 +451,8 @@ node01    NotReady   <none>                 12h   v1.22.4
 等几分钟，就会发现状态变成Ready了。再查看一下系统pod的情况
 
 ```bash
-[haojie@manager ~]$ kubectl get pods -n kube-system
+# -A 等价于-n all-namespace
+[haojie@manager ~]$ kubectl get pod -A
 NAME                              READY   STATUS              RESTARTS        AGE
 coredns-7f6cbbb7b8-2bs8h          0/1     ContainerCreating   0               17m
 coredns-7f6cbbb7b8-jqbln          0/1     ContainerCreating   0               17m
@@ -456,10 +466,11 @@ kube-scheduler-manager            1/1     Running             8 (19m ago)     17
 
 前面两个还没有启动成功，查看日志
 
-```
+```bash
+calico/node is not ready: BIRD is not ready: BGP not established with 192.168.0.73
 ```
 
-
+> 参考博客的解决方案https://blog.51cto.com/heian99/3924711，将br对应的网络删掉，仍旧没有解决，这部分就先放着。
 
 #### （6）环境测试
 
