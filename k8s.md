@@ -426,7 +426,7 @@ node01    NotReady   <none>                 12h   v1.22.4
 [haojie@manager ~]$ curl https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml -O
 ```
 
-修改配置，在里面搜索192，将其改为`10.244.0.0/16`, 并将注释放开
+修改配置`calico.yaml`，在里面搜索192，将其改为`10.244.0.0/16`, 并将注释放开
 
 ```bash
 - name: CALICO_IPV4POOL_CIDR
@@ -439,7 +439,7 @@ node01    NotReady   <none>                 12h   v1.22.4
 - name: CLUSTER_TYPE
   value: "k8s,bgp"
 - name: IP_AUTODETECTION_METHOD  # 新增
-  value: "interface=eth1" # 新增
+  value: "interface=eth.*" # 新增
 ```
 
 执行文件
