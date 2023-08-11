@@ -1,6 +1,488 @@
 # Linux
 
-## 一、基础命令
+## 一、shell
+
+### 1. shell是什么？
+
+计算机操作的一般交互过程，**图形界面 <=> Shell/应用程序 <=> 内核 <=> 硬件**
+
+<img src="assets/image-20230811141054758.png" alt="image-20230811141054758" style="zoom:80%;" />
+
+- Shell：接受来自用户的指令，与内核进行沟通。
+- 内核：CPU调度、内存管理等
+- 硬件：负责具体运算的，如CPU、总线等。
+
+Shell分两大类
+
+- 图形界面Shell：例如Linux Shell，GNOME，KDE等
+- 命令行Shell：sh(/bin/sh)，bash(/bin/bash)，C Shell(/usr/bin/csh)等
+
+> Bash(Bourne Again Shell)，是Shell中的一种，也是大多数Linux 系统默认的 Shell。
+
+### 2. shell脚本与shell程序
+
+- shell 脚本：和Python脚本一样，是内在的命令文件
+- shell程序：第一节说的就是shell程序，接受来自用户的指令，并和内核进行沟通。
+
+### 3. shell变量
+
+#### （1）定义变量
+
+```bash
+your_name="haojie"
+```
+
+注意定义的时候，中间不能有空格
+
+#### （2）使用变量
+
+使用一个定义过的变量，只要在变量名前面加美元符号即可，如
+
+```bash
+your_name="qinjx"
+echo $your_name
+echo ${your_name}
+```
+
+变量名外面的花括号是可选的，加不加都行，但是更推荐加上，方便解释器识别变量的边界。
+
+```bash
+for skill in Ada Coffe Action Java; do
+    echo "I am good at ${skill}Script"
+done
+```
+
+### 4. shell字符串
+
+#### （1）单引号和双引号
+
+字符串可以用单引号，也可以用双引号，也可以不用引号。更推荐使用双引号，双引号支持变量或者转义符，单引号不支持。
+
+#### （2）拼接字符串
+
+```bash
+your_name="runoob"
+# 使用双引号拼接
+greeting="hello, "$your_name" !"
+greeting_1="hello, ${your_name} !"
+echo $greeting  $greeting_1
+
+# 使用单引号拼接
+greeting_2='hello, '$your_name' !'
+greeting_3='hello, ${your_name} !'
+echo $greeting_2  $greeting_3
+```
+
+输出结果
+
+```bash
+hello, runoob ! hello, runoob !
+hello, runoob ! hello, ${your_name} !
+```
+
+### 5. shell数组
+
+#### （1）定义数组
+
+```bash
+arr=("shu" "haojie")
+```
+
+#### （2）获取数组元素
+
+```bash
+echo ${arr[0]}
+```
+
+### 6. shell传递参数
+
+可以在执行shell脚本时，向shell脚本传递参数，例如
+
+```bash
+#!/bin/bash
+# author:菜鸟教程
+# url:www.runoob.com
+
+echo "Shell 传递参数实例！";
+echo "执行的文件名：$0";
+echo "第一个参数为：$1";
+echo "第二个参数为：$2";
+echo "第三个参数为：$3";
+```
+
+为脚本设置可执行权限，并执行脚本，输出结果如下所示：
+
+```bash
+$ chmod +x test.sh 
+$ ./test.sh 1 2 3
+Shell 传递参数实例！
+执行的文件名：./test.sh
+第一个参数为：1
+第二个参数为：2
+第三个参数为：3
+```
+
+### 7. shell运算符
+
+#### （1）算术运算符
+
+原生bash不支持简单的数学运算，但是可以通过其他命令来实现，例如 awk 和 expr，expr 最常用。
+
+```bash
+#!/bin/bash
+
+val=`expr 2 + 2`
+echo "两数之和为 : $val"
+```
+
+#### （2）关系运算符
+
+假定变量 a 为 10，变量 b 为 20
+
+| 运算符 | 说明                                                  | 举例                       |
+| ------ | ----------------------------------------------------- | -------------------------- |
+| -eq    | 检测两个数是否相等，相等返回 true。                   | [ $a -eq $b ] 返回 false。 |
+| -ne    | 检测两个数是否不相等，不相等返回 true。               | [ $a -ne $b ] 返回 true。  |
+| -gt    | 检测左边的数是否大于右边的，如果是，则返回 true。     | [ $a -gt $b ] 返回 false。 |
+| -lt    | 检测左边的数是否小于右边的，如果是，则返回 true。     | [ $a -lt $b ] 返回 true。  |
+| -ge    | 检测左边的数是否大于等于右边的，如果是，则返回 true。 | [ $a -ge $b ] 返回 false。 |
+| -le    | 检测左边的数是否小于等于右边的，如果是，则返回 true。 | [ $a -le $b ] 返回 true。  |
+
+```bash
+#!/bin/bash
+a=10
+b=20
+
+if [ $a -eq $b ]
+then
+   echo "$a -eq $b : a 等于 b"
+else
+   echo "$a -eq $b: a 不等于 b"
+fi
+```
+
+输出
+
+```bash
+10 -eq 20: a 不等于 b
+```
+
+#### （3）布尔运算符
+
+假定变量 a 为 10，变量 b 为 20
+
+| 运算符 | 说明                                                | 举例                                     |
+| ------ | --------------------------------------------------- | ---------------------------------------- |
+| !      | 非运算，表达式为 true 则返回 false，否则返回 true。 | [ ! false ] 返回 true。                  |
+| -o     | 或运算，有一个表达式为 true 则返回 true。           | [ $a -lt 20 -o $b -gt 100 ] 返回 true。  |
+| -a     | 与运算，两个表达式都为 true 才返回 true。           | [ $a -lt 20 -a $b -gt 100 ] 返回 false。 |
+
+```bash
+if [ $a -lt 100 -a $b -gt 15 ]
+then
+   echo "$a 小于 100 且 $b 大于 15 : 返回 true"
+else
+   echo "$a 小于 100 且 $b 大于 15 : 返回 false"
+fi
+```
+
+输出
+
+```bash
+10 小于 100 且 20 大于 15 : 返回 true
+```
+
+#### （4）逻辑运算符
+
+假定变量 a 为 10，变量 b 为 20
+
+| 运算符 | 说明       | 举例                                       |
+| ------ | ---------- | ------------------------------------------ |
+| &&     | 逻辑的 AND | [[ $a -lt 100 && $b -gt 100 ]] 返回 false  |
+| \|\|   | 逻辑的 OR  | [[ $a -lt 100 \|\| $b -gt 100 ]] 返回 true |
+
+```bash
+#!/bin/bash
+
+a=10
+b=20
+
+if [[ $a -lt 100 && $b -gt 100 ]]
+then
+   echo "返回 true"
+else
+   echo "返回 false"
+fi
+```
+
+输出
+
+```bash
+返回 false
+```
+
+#### （5）字符串运算符
+
+假定变量 a 为 "abc"，变量 b 为 "efg"
+
+| 运算符 | 说明                                         | 举例                     |
+| ------ | -------------------------------------------- | ------------------------ |
+| =      | 检测两个字符串是否相等，相等返回 true。      | [ $a = $b ] 返回 false。 |
+| !=     | 检测两个字符串是否不相等，不相等返回 true。  | [ $a != $b ] 返回 true。 |
+| -z     | 检测字符串长度是否为0，为0返回 true。        | [ -z $a ] 返回 false。   |
+| -n     | 检测字符串长度是否不为 0，不为 0 返回 true。 | [ -n "$a" ] 返回 true。  |
+| $      | 检测字符串是否不为空，不为空返回 true。      | [ $a ] 返回 true。       |
+
+```bash
+a="abc"
+b="efg"
+if [ $a ]
+then
+   echo "$a : 字符串不为空"
+else
+   echo "$a : 字符串为空"
+fi
+```
+
+输出
+
+```bash
+abc : 字符串不为空
+```
+
+#### （6）文件测试运算符
+
+| 操作符  | 说明                                                         |
+| ------- | ------------------------------------------------------------ |
+| -d file | 检测文件是否是目录，如果是，则返回 true。                    |
+| -f file | 检测文件是否是普通文件（既不是目录，也不是设备文件），如果是，则返回 true。 |
+| -r file | 检测文件是否可读，如果是，则返回 true。                      |
+| -w file | 检测文件是否可写，如果是，则返回 true。                      |
+| -x file | 检测文件是否可执行，如果是，则返回 true。                    |
+| -s file | 检测文件是否为空（文件大小是否大于0），不为空返回 true。     |
+| -e file | 检测文件（包括目录）是否存在，如果是，则返回 true。          |
+
+变量 file 表示文件`/var/www/runoob/test.sh`，它的大小为 100 字节，具有 rwx 权限。
+
+```bash
+#!/bin/bash
+
+file="/var/www/runoob/test.sh"
+if [ -x $file ]
+then
+   echo "文件可执行"
+else
+   echo "文件不可执行"
+fi
+if [ -f $file ]
+then
+   echo "文件为普通文件"
+else
+   echo "文件为特殊文件"
+fi
+if [ -d $file ]
+then
+   echo "文件是个目录"
+else
+   echo "文件不是个目录"
+fi
+```
+
+输出
+
+```bash
+文件可执行
+文件为普通文件
+文件不是个目录
+```
+
+### 8. shell输出命令
+
+#### （1）echo命令
+
+- 显示转义符
+
+例如想输出`"It is a test"`，而不是`It is a test`
+
+```bash
+echo "\"It is a test\""
+```
+
+结果将是
+
+```bash
+"It is a test"
+```
+
+- 显示变量
+
+```bash
+#!/bin/sh
+read name # read命令从标准输入中读取一行,并把输入行的每个字段的值指定给shell变量
+echo "$name It is a test"
+```
+
+以上代码保存为 test.sh，name 接收标准输入的变量，结果将是:
+
+```bash
+[root@www ~]# sh test.sh
+OK                     #标准输入
+OK It is a test        #输出
+```
+
+- 显示换行
+
+```bash
+echo -e "OK! \n" # -e 开启转义
+echo "It is a test"
+```
+
+输出结果
+
+```bash
+OK!
+
+It is a test
+```
+
+#### （2）printf命令
+
+```bash
+#!/bin/bash
+ 
+printf "%-10s %-8s %-4s\n" 姓名 性别 体重kg  
+printf "%-10s %-8s %-4.2f\n" 郭靖 男 66.1234 
+printf "%-10s %-8s %-4.2f\n" 杨过 男 48.6543 
+printf "%-10s %-8s %-4.2f\n" 郭芙 女 47.9876
+```
+
+输出结果如下
+
+```bash
+姓名     性别   体重kg
+郭靖     男      66.12
+杨过     男      48.65
+郭芙     女      47.99
+```
+
+- `%s %c %d %f` 都是格式替代符，`％s` 输出一个字符串，`％d` 整型输出，`％c` 输出一个字符，`％f` 输出实数，以小数形式输出。
+
+- `%-10s` 指一个宽度为 10 个字符（`-` 表示左对齐，没有则表示右对齐），任何字符都会被显示在 10 个字符宽的字符内，如果不足则自动以空格填充，超过也会将内容全部显示出来。
+
+- `%-4.2f` 指格式化为小数，其中 `.2` 指保留2位小数。
+
+### 9. if语句
+
+### （1）if
+
+```bash
+if condition
+then
+    command1 
+    command2
+    ...
+    commandN 
+fi
+```
+
+### （2）if...else
+
+```bash
+if condition
+then
+    command1 
+    command2
+    ...
+    commandN
+else
+    command
+fi
+```
+
+### （3）if...elif...else
+
+```bash
+if condition1
+then
+    command1
+elif condition2 
+then 
+    command2
+else
+    commandN
+fi
+```
+
+### 10. for循环
+
+for循环的格式如下
+
+```bash
+for var in item1 item2 ... itemN
+do
+    command1
+    command2
+    ...
+    commandN
+done
+```
+
+例如
+
+```bash
+for loop in 1 2 3 4 5
+do
+    echo "The value is: $loop"
+done
+```
+
+输出
+
+```bash
+The value is: 1
+The value is: 2
+The value is: 3
+The value is: 4
+The value is: 5
+```
+
+### 11. while循环
+
+While循环的格式如下
+
+```bash
+#!/bin/bash
+int=1
+while(( $int<=5 ))
+do
+    echo $int
+    let "int++"
+done
+```
+
+例如
+
+```bash
+#!/bin/bash
+int=1
+while(( $int<=5 ))
+do
+    echo $int
+    let "int++"
+done
+```
+
+输出
+
+```bash
+1
+2
+3
+4
+5
+```
+
+## 二、基础命令
 
 linux命令的通用格式如下
 
@@ -247,7 +729,7 @@ G: 跳到尾行
 :set nu
 ```
 
-## 二、linux用户
+## 三、linux用户
 
 ### 1. 切换用户
 
@@ -361,7 +843,7 @@ chown root hello.txt  # 文件所属用户修改为root
 chown :root hello.txt # 文件所属用户组修改为root
 ```
 
-## 三、linux网络
+## 四、linux网络
 
 ### 1. ip地址
 
@@ -555,7 +1037,7 @@ Trying 127.0.0.1...
 Trying 121.36.104.55...
 ```
 
-## 四、linux状态
+## 五、linux状态
 
 ### 1. 进程管理
 
@@ -712,7 +1194,7 @@ Mem:           2.0G        313M         80M        1.0M        1.6G        1.5G
 Swap:            0B          0B          0B
 ```
 
-## 五、环境变量
+## 六、环境变量
 
 ### 1. 查看环境变量
 
@@ -762,7 +1244,7 @@ export 变量名=变量值
 
 - 针对所有用户：修改`/etc/profile`文件
 
-## 六、文件操作
+## 七、文件操作
 
 ### 1. 文件上传、下载
 
@@ -827,7 +1309,7 @@ Archive:  test.zip
    creating: /home/haojie/jieya/Videos/
 ```
 
-## 七、linux软件
+## 八、linux软件
 
 ### 1. 快捷键
 
