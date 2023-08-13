@@ -448,7 +448,7 @@ The value is: 5
 
 ### 11. while循环
 
-While循环的格式如下
+while循环的格式如下
 
 ```bash
 #!/bin/bash
@@ -481,6 +481,14 @@ done
 4
 5
 ```
+
+### 12. shell函数
+
+
+
+### 13. awk
+
+
 
 ## 二、基础命令
 
