@@ -510,7 +510,7 @@ dockerhub.datagrand.com/idps/new_extract_html:ci_20230622_a852b2b
 awk的基本用法如下，它从输入文本中选择特定的行，并对这些行进行处理，以提取出想要的数据
 
 ```bash
-awk 'pattern { action }' input_file
+awk [选项参数] 'pattern { action }' input_file
 ```
 
 - `pattern`是一个条件，用于选择要处理的行。如果省略了条件，那么操作将适用于所有行。
@@ -526,6 +526,34 @@ dockerhub.datagrand.com/base_tools/rabbitmq:3.8.26
 ```
 
 前面的`/mq`就是pattern，而后面的`{print $0}`则是去执行的具体指令
+
+#### （3）选项参数
+
+- `-F`参数：用于指定字段分隔符，让 `awk` 在处理输入数据时根据指定的分隔符将每一行划分成不同的字段。
+
+```bash
+[haojie@node01 ~]cat data.txt
+Alice:25:F
+Bob:30:M
+Carol:28:F
+David:22:M
+# 这里","会空一格. 如果是"\t"，则会空4格
+[haojie@node01 ~]awk -F ':' '{ print "Name: " $1, "Age: " $2 }' data.txt
+Name: Alice Age: 25
+Name: Bob Age: 30
+Name: Carol Age: 28
+Name: David Age: 22
+```
+
+- `-v`参数：用于在 `awk` 命令中定义变量并赋值。这样可以在 `awk` 脚本中使用这些变量来进行计算、处理数据等操作
+
+```
+[haojie@node01 ~]awk -F ':' -v increment=5 '{ print "Name: " $1 ,"Age: " $2+increment }' data.txt
+Name: Alice Age: 30
+Name: Bob Age: 35
+Name: Carol Age: 33
+Name: David Age: 27
+```
 
 ### 14. sed命令
 
