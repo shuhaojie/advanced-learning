@@ -488,6 +488,47 @@ done
 
 ### 13. awk
 
+#### （1）作用
+
+awk命令是用来处理表格数据的，可以把很多命令的输出理解为表格，例如`docker images`.可以利用awk命令来帮助我们做很多事情，例如要输出当前机器所有的镜像
+
+```bash
+[haojie@node01 ~]docker images | awk 'NR>1 {print $1 ":" $2 }'
+dockerhub.datagrand.com/databj/sxboard/format_convert:release_ci_20220419_eda779c
+dockerhub.datagrand.com/ysocr/ocr_platform_api:release_ci_20230412_3d4f75c
+dockerhub.datagrand.com/idps/new_extract_html:ci_20230626_f2b5660
+dockerhub.datagrand.com/idps/fe_itp:ci_20230622_ad3176c
+dockerhub.datagrand.com/idps/new_extract_html:ci_20230622_a852b2b
+```
+
+这里的`$1`表示输出表格的第一列，`NR>1`表示输出大于第一行之外的所有行。
+
+#### （2）用法
+
+> 以下内容来自chatgpt，https://chat.openai.com/share/a026b623-c2f5-4fea-8ca1-ca57c40c5f4a
+
+awk的基本用法如下，它从输入文本中选择特定的行，并对这些行进行处理，以提取出想要的数据
+
+```bash
+awk 'pattern { action }' input_file
+```
+
+- `pattern`是一个条件，用于选择要处理的行。如果省略了条件，那么操作将适用于所有行。
+- `action`是一系列命令，它定义了在满足条件时要执行的操作。多个命令可以使用分号或换行分隔。
+- `input_file`是要处理的输入文件的名称。
+
+例如查找文件中包含mq关键字的镜像
+
+```bash
+[haojie@node01 ~]awk '/mq/ {print $0}' images.txt
+dockerhub.datagrand.com/base_tools/rabbitmq:3.11.4-management
+dockerhub.datagrand.com/base_tools/rabbitmq:3.8.26
+```
+
+前面的`/mq`就是pattern，而后面的`{print $0}`则是去执行的具体指令
+
+### 14. sed命令
+
 
 
 ## 二、基础命令
