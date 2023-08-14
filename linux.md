@@ -493,7 +493,7 @@ done
 awk命令是用来处理表格数据的，可以把很多命令的输出理解为表格，例如`docker images`.可以利用awk命令来帮助我们做很多事情，例如要输出当前机器所有的镜像
 
 ```bash
-[haojie@node01 ~]docker images | awk 'NR>1 {print $1 ":" $2 }'
+[haojie@manager ~]docker images | awk 'NR>1 {print $1 ":" $2 }'
 dockerhub.datagrand.com/databj/sxboard/format_convert:release_ci_20220419_eda779c
 dockerhub.datagrand.com/ysocr/ocr_platform_api:release_ci_20230412_3d4f75c
 dockerhub.datagrand.com/idps/new_extract_html:ci_20230626_f2b5660
@@ -520,7 +520,7 @@ awk [选项参数] 'pattern { action }' input_file
 例如查找文件中包含mq关键字的镜像
 
 ```bash
-[haojie@node01 ~]awk '/mq/ {print $0}' images.txt
+[haojie@manager ~]awk '/mq/ {print $0}' images.txt
 dockerhub.datagrand.com/base_tools/rabbitmq:3.11.4-management
 dockerhub.datagrand.com/base_tools/rabbitmq:3.8.26
 ```
@@ -532,13 +532,13 @@ dockerhub.datagrand.com/base_tools/rabbitmq:3.8.26
 - `-F`参数：用于指定字段分隔符，让 `awk` 在处理输入数据时根据指定的分隔符将每一行划分成不同的字段。
 
 ```bash
-[haojie@node01 ~]cat data.txt
+[haojie@manager ~]cat data.txt
 Alice:25:F
 Bob:30:M
 Carol:28:F
 David:22:M
 # 这里","会空一格. 如果是"\t"，则会空4格
-[haojie@node01 ~]awk -F ':' '{ print "Name: " $1, "Age: " $2 }' data.txt
+[haojie@manager ~]awk -F ':' '{ print "Name: " $1, "Age: " $2 }' data.txt
 Name: Alice Age: 25
 Name: Bob Age: 30
 Name: Carol Age: 28
@@ -548,7 +548,7 @@ Name: David Age: 22
 - `-v`参数：用于在 `awk` 命令中定义变量并赋值。这样可以在 `awk` 脚本中使用这些变量来进行计算、处理数据等操作
 
 ```
-[haojie@node01 ~]awk -F ':' -v increment=5 '{ print "Name: " $1 ,"Age: " $2+increment }' data.txt
+[haojie@manager ~]awk -F ':' -v increment=5 '{ print "Name: " $1 ,"Age: " $2+increment }' data.txt
 Name: Alice Age: 30
 Name: Bob Age: 35
 Name: Carol Age: 33
@@ -557,7 +557,56 @@ Name: David Age: 27
 
 ### 14. sed命令
 
+> 注意：这个命令在macOS上和Linux不太一样，操作的时候注意在linux上操作
 
+#### （1）作用
+
+sed命令根据指定的规则对文本进行转换、替换、删除等操作。`sed` 在文本处理和批量编辑中非常有用。
+
+#### （2）文本替换
+
+使用 `s` 命令可以替换文本中匹配某一模式的内容为指定的文本。
+
+- 替换文本
+
+```bash
+sed 's/old_text/new_text/' input.txt
+```
+
+这会在 `input.txt` 文件中将第一次出现的 `old_text` 替换为 `new_text`。
+
+- 替换所有匹配
+
+```bash
+sed 's/old_text/new_text/g' input.txt
+```
+
+通过在替换命令中添加 `g` 标志，`sed` 将替换所有出现的匹配项。
+
+- 原地编辑
+
+在实际使用中，经常需要加上`-i`选项，表示**原地编辑（in-place editing）**，
+
+```bash
+[haojie@manager ~]$ sed -i 's/node01/manager/g' linux.md
+```
+
+加上`-i`之后，会使文件发生改变，后面删除和新增同理，不再赘述
+
+#### （3）文本删除
+
+```bash
+sed '/pattern_to_delete/d' input.txt
+```
+
+这会删除包含指定模式的行。
+
+#### （4）文本添加
+
+```bash
+sed '3i\New line before' input.txt  # 在第3行之前添加文本
+sed '3a\New line after' input.txt   # 在第3行之后添加文本
+```
 
 ## 二、基础命令
 
@@ -1110,7 +1159,7 @@ kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
 ```bash
 [haojie@manager ~]$ telnet 127.0.0.1 31724
 Trying 127.0.0.1...
-[haojie@node01 ~]$ telnet 121.36.104.55 31724
+[haojie@manager ~]$ telnet 121.36.104.55 31724
 Trying 121.36.104.55...
 ```
 
