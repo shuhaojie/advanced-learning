@@ -484,7 +484,59 @@ done
 
 ### 12. shell函数
 
+#### （1）定义函数
 
+要定义一个函数，可以使用以下语法：
+
+```bash
+function_name() {
+    # Commands and operations
+}
+```
+
+例如
+
+```bash
+print_hello() {
+    echo "Hello, world!"
+}
+```
+
+#### （2）使用函数
+
+```bash
+print_hello
+```
+
+#### （3）传递参数
+
+```bash
+greet_person() {
+    echo "Hello, $1!"
+}
+
+greet_person "Alice"
+greet_person "Bob"
+```
+
+#### （4）返回值
+
+```bash
+check_file_exists() {
+    if [ -e "$1" ]; then
+        return 0  # File exists
+    else
+        return 1  # File does not exist
+    fi
+}
+
+filename="example.txt"
+if check_file_exists "$filename"; then
+    echo "File exists."
+else
+    echo "File does not exist."
+fi
+```
 
 ### 13. awk
 
@@ -758,9 +810,9 @@ wc [-c -m -l -w] 文件路径
   2  20 110 test.txt  # 2表示行数，20表示单词数，110表示字节数
 ```
 
-#### （3）管道符(｜)
+#### （3）管道符（`|`）
 
-管道符｜作用：将管道符左边命令的结果，作为右边命令的输入
+管道符`｜`作用：将管道符左边命令的结果，作为右边命令的输入
 
 <img src="./assets/image-20230522095234080.png" alt="image-20230522095234080" style="zoom:70%;" />
 
