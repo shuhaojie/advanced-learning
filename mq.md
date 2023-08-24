@@ -339,3 +339,15 @@ if method_frame:
 else:
     print('No message returned')
 ```
+
+## 四、可视化页面
+
+### 1. queues
+
+Ready：当消息等待处理时，它就处于Ready状态。
+
+Unacked：意味着消费者已承诺处理它们，但尚未确认它们已被处理。
+
+> https://stackoverflow.com/a/31916569/10844937
+
+![image-20230824094449835](assets/image-20230824094449835.png)
