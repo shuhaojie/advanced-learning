@@ -344,9 +344,16 @@ else:
 
 ### 1. queues
 
-Ready：当消息等待处理时，它就处于Ready状态。
+- Messages
 
-Unacked：意味着消费者已承诺处理它们，但尚未确认它们已被处理。
+  - Ready：当消息等待处理时，它就处于Ready状态。
+
+  - Unacked：意味着消费者已承诺处理它们，但尚未确认它们已被处理。
+
+- State
+
+  - running：运行中
+  - idle：空闲
 
 > https://stackoverflow.com/a/31916569/10844937
 
