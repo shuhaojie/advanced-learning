@@ -78,7 +78,7 @@ pod虽然是k8s的最小控制单元，但是k8s很少直接控制pod。而是�
 
 #### （5）Service
 
-pod对外服务的统一入口。例如下图中，**需要用到service，将外界的流量引进来**，交给tomcat，**通过service可以实现复杂均衡的效果**。
+pod对外服务的统一入口。例如下图中，**需要用到service，将外界的流量引进来**，交给tomcat，**通过service可以实现负载均衡的效果**。
 
 <img src="assets/image-20230426222911281.png" alt="image-20230426222911281" style="zoom:55%;" />
 
@@ -98,381 +98,254 @@ pod对外服务的统一入口。例如下图中，**需要用到service，将�
 - kubeadm：搭建kubenetes集群的工具
 - 二进制包：依次下载每个组件的二进制包
 
-这里采用第二种方式，并且采用两台服务器，华为云(centos)和腾讯云(centos)。
+这里采用虚拟机来安装，两台虚拟机，2核，2GB的内存，50GB的硬盘，虚拟机安装的是Centos7操作系统
 
 ### 2. 环境初始化
 
-以下所有命令需要在master和node节点上执行
+> 以下所有命令需要在master和node节点上执行
 
-#### （1）禁用磁盘拷贝
+#### （1）检查操作系统的版本
 
-```
-sudo swapoff -a
+```bash
+# 此方式下安装kubernetes集群要求Centos版本要在7.5或之上
+[root@master ~]# cat /etc/redhat-release
+Centos Linux 7.5.1804 (Core)
 ```
 
 #### （2）主机名解析
 
+为了方便集群节点间的直接调用，在这个配置一下主机名解析，企业中推荐使用内部DNS服务器
+
 ```bash
-sudo vim /etc/hosts
-43.143.70.145 master
-121.41.55.89 node1
+# 主机名成解析 编辑三台服务器的/etc/hosts文件，添加下面内容
+192.168.157.100 master
+192.168.157.101 node01
 ```
 
-#### （3）禁用防火墙
+#### （3）时间同步
+
+kubernetes要求集群中的节点时间必须精确一直，这里使用chronyd服务从网络同步时间
+
+企业中建议配置内部的时间同步服务器
 
 ```bash
-sudo setenforce 0
-sudo sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
-sudo systemctl stop firewalld
-sudo systemctl disable firewalld
+# 启动chronyd服务
+[root@master ~]# systemctl start chronyd
+[root@master ~]# systemctl enable chronyd
+[root@master ~]# date
+```
+
+#### （4） 禁用iptable和firewalld服务
+
+kubernetes和docker 在运行的中会产生大量的iptables规则，为了不让系统规则跟它们混淆，直接关闭系统的规则
+
+```bash
+# 1 关闭firewalld服务
+[root@master ~]# systemctl stop firewalld
+[root@master ~]# systemctl disable firewalld
+# 2 关闭iptables服务
+[root@master ~]# systemctl stop iptables
+[root@master ~]# systemctl disable iptables
+```
+
+#### （5）禁用selinux
+
+selinux是linux系统下的一个安全服务，如果不关闭它，在安装集群中会产生各种各样的奇葩问题
+
+```bash
+# 编辑 /etc/selinux/config 文件，修改SELINUX的值为disable
+# 注意修改完毕之后需要重启linux服务
+SELINUX=disabled
+```
+
+#### （6）禁用swap分区
+
+swap分区指的是虚拟内存分区，它的作用是物理内存使用完，之后将磁盘空间虚拟成内存来使用，启用swap设备会对系统的性能产生非常负面的影响，因此kubernetes要求每个节点都要禁用swap设备，但是如果因为某些原因确实不能关闭swap分区，就需要在集群安装过程中通过明确的参数进行配置说明
+
+```bash
+# 编辑分区配置文件/etc/fstab，注释掉swap分区一行
+# 注意修改完毕之后需要重启linux服务
+vim /etc/fstab
+注释掉 /dev/mapper/centos-swap swap
+# /dev/mapper/centos-swap swap
+```
+
+#### （7）修改linux的内核参数
+
+```bash
+# 修改linux的内核采纳数，添加网桥过滤和地址转发功能
+# 编辑/etc/sysctl.d/kubernetes.conf文件，添加如下配置：
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+
+# 重新加载配置
+[root@master ~]# sysctl -p
+# 加载网桥过滤模块
+[root@master ~]# modprobe br_netfilter
+# 查看网桥过滤模块是否加载成功
+[root@master ~]# lsmod | grep br_netfilter
+```
+
+#### （8）配置ipvs功能
+
+在Kubernetes中Service有两种带来模型，一种是基于iptables的，一种是基于ipvs的两者比较的话，ipvs的性能明显要高一些，但是如果要使用它，需要手动载入ipvs模块
+
+```bash
+# 1.安装ipset和ipvsadm
+[root@master ~]# yum install ipset ipvsadm -y
+# 2.添加需要加载的模块写入脚本文件
+[root@master ~]# cat <<EOF> /etc/sysconfig/modules/ipvs.modules
+#!/bin/bash
+modprobe -- ip_vs
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_sh
+modprobe -- nf_conntrack_ipv4
+EOF
+# 3.为脚本添加执行权限
+[root@master ~]# chmod +x /etc/sysconfig/modules/ipvs.modules
+# 4.执行脚本文件
+[root@master ~]# /bin/bash /etc/sysconfig/modules/ipvs.modules
+# 5.查看对应的模块是否加载成功
+[root@master ~]# lsmod | grep -e ip_vs -e nf_conntrack_ipv4
 ```
 
 ### 3. 安装组件
 
-#### （1）安装docker相关
-
-docker之前安装过，不再赘述，但是后续操作还需要执行
-
-- 更改镜像源
+#### （1）安装docker
 
 ```bash
-cat <<EOF > daemon.json
+# 1、切换镜像源
+[root@master ~]# wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+
+# 2、查看当前镜像源中支持的docker版本
+[root@master ~]# yum list docker-ce --showduplicates
+
+# 3、安装特定版本的docker-ce
+# 必须制定--setopt=obsoletes=0，否则yum会自动安装更高版本
+[root@master ~]# yum install --setopt=obsoletes=0 docker-ce-18.06.3.ce-3.el7 -y
+
+# 4、添加一个配置文件
+#Docker 在默认情况下使用Vgroup Driver为cgroupfs，而Kubernetes推荐使用systemd来替代cgroupfs
+[root@master ~]# mkdir /etc/docker
+[root@master ~]# cat <<EOF> /etc/docker/daemon.json
 {
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "registry-mirrors": ["https://ud6340vz.mirror.aliyuncs.com"]
+	"exec-opts": ["native.cgroupdriver=systemd"],
+	"registry-mirrors": ["https://kn0t2bca.mirror.aliyuncs.com"]
 }
 EOF
+
+# 5、启动dokcer
+[root@master ~]# systemctl restart docker
+[root@master ~]# systemctl enable docker
 ```
 
-- 镜像源移动到对应目录下
+#### （2）安装Kubernetes组件
 
 ```bash
-sudo mv daemon.json /etc/docker/
-```
-
-- 重启
-
-```bash
-sudo systemctl daemon-reload
-
-sudo systemctl restart docker
-```
-
-#### （2）安装k8s相关
-
-- 更改镜像源
-
-```bash
-cat <<EOF > kubernetes.repo
+# 1、由于kubernetes的镜像在国外，速度比较慢，这里切换成国内的镜像源
+# 2、编辑/etc/yum.repos.d/kubernetes.repo,添加下面的配置
 [kubernetes]
 name=Kubernetes
-baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
 enabled=1
-gpgcheck=0
+gpgchech=0
 repo_gpgcheck=0
-gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
-EOF
+gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
+			http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+
+# 3、安装kubeadm、kubelet和kubectl
+[root@master ~]# yum install --setopt=obsoletes=0 kubeadm-1.17.4-0 kubelet-1.17.4-0 kubectl-1.17.4-0 -y
+
+# 4、配置kubelet的cgroup
+#编辑/etc/sysconfig/kubelet, 添加下面的配置
+KUBELET_CGROUP_ARGS="--cgroup-driver=systemd"
+KUBE_PROXY_MODE="ipvs"
+
+# 5、设置kubelet开机自启
+[root@master ~]# systemctl enable kubelet
 ```
 
-- 移动镜像源
+### 4. 集群安装
+
+#### （1）准备集群镜像
 
 ```bash
-sudo mv kubernetes.repo /etc/yum.repos.d/
+# 在安装kubernetes集群之前，必须要提前准备好集群需要的镜像，所需镜像可以通过下面命令查看
+[root@master ~]# kubeadm config images list
+
+# 下载镜像
+# 此镜像kubernetes的仓库中，由于网络原因，无法连接，下面提供了一种替换方案
+images=(
+	kube-apiserver:v1.17.4
+	kube-controller-manager:v1.17.4
+	kube-scheduler:v1.17.4
+	kube-proxy:v1.17.4
+	pause:3.1
+	etcd:3.4.3-0
+	coredns:1.6.5
+)
+
+for imageName in ${images[@]};do
+	docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName
+	docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName k8s.gcr.io/$imageName
+	docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
+done
 ```
 
-- 安装组件
+#### （2）集群初始化
+
+> 下面的操作只需要在master节点上执行即可
 
 ```bash
-sudo yum install yum-utils
-sudo yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-sudo yum install -y kubelet-1.22.4 kubectl-1.22.4 kubeadm-1.22.4 docker-ce
+# 创建集群
+[root@master ~]# kubeadm init \
+	--apiserver-advertise-address=192.168.157.100 \
+	--kubernetes-version=v1.17.4 \
+	--service-cidr=10.96.0.0/12 \
+	--pod-network-cidr=10.244.0.0/16
+# 创建必要文件
+[root@master ~]# mkdir -p $HOME/.kube
+[root@master ~]# sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+[root@master ~]# sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-> 注意：两个节点要安装一样的版本
-
-- 重启
+> 下面的操作只需要在node节点上执行即可
 
 ```bash
-sudo systemctl enable kubelet
-sudo systemctl start kubelet
-sudo systemctl enable docker
-sudo systemctl start docker
+kubeadm join 192.168.0.100:6443 --token awk15p.t6bamck54w69u4s8 \
+    --discovery-token-ca-cert-hash sha256:a94fa09562466d32d29523ab6cff122186f1127599fa4dcd5fa0152694f17117 
 ```
 
-###  4. 集群安装
-
-#### （1）拉取镜像
-
-- 查看初始化需要的镜像
-
-```
-[haojie@manager ~]$ kubeadm config images list
-k8s.gcr.io/kube-apiserver:v1.22.17
-k8s.gcr.io/kube-controller-manager:v1.22.17
-k8s.gcr.io/kube-scheduler:v1.22.17
-k8s.gcr.io/kube-proxy:v1.22.17
-k8s.gcr.io/pause:3.5
-k8s.gcr.io/etcd:3.5.0-0
-k8s.gcr.io/coredns/coredns:v1.8.4
-```
-
-- 替换镜像
+在master上查看节点信息
 
 ```bash
-[haojie@manager ~]$ vim kubeadm-config-image.yaml
-
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: ClusterConfiguration
-# 默认为k8s.gcr.io，但是网络不通，所以要替换为阿里云镜像
-imageRepository: registry.aliyuncs.com/google_containers
+[root@master ~]# kubectl get nodes
+NAME    STATUS   ROLES     AGE   VERSION
+master  NotReady  master   6m    v1.17.4
+node01   NotReady   <none>  22s   v1.17.4
 ```
 
-- 检查是否替换成功
+#### （3） 安装网络插件
+
+> 只在master节点操作即可
 
 ```bash
-[haojie@manager ~]$ kubeadm config images list --config kubeadm-config-image.yaml
-registry.aliyuncs.com/google_containers/kube-apiserver:v1.22.17
-registry.aliyuncs.com/google_containers/kube-controller-manager:v1.22.17
-registry.aliyuncs.com/google_containers/kube-scheduler:v1.22.17
-registry.aliyuncs.com/google_containers/kube-proxy:v1.22.17
-registry.aliyuncs.com/google_containers/pause:3.5
-registry.aliyuncs.com/google_containers/etcd:3.5.0-0
-registry.aliyuncs.com/google_containers/coredns:v1.8.4
+[root@master ~]# wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+[root@master ~]# kubectl create -f kube-flannel.yml
 ```
 
-- 拉取镜像
+此时再查看节点信息
 
 ```bash
-[haojie@manager ~]$ kubeadm config images pull --config kubeadm-config-image.yaml
+[root@master ~]# kubectl get nodes
+NAME    STATUS   ROLES     AGE   VERSION
+master  Ready  master   6m    v1.17.4
+node01  Ready   <none>  22s   v1.17.4
 ```
 
-> 注意：在两个节点上都需拉取镜像
-
-#### （2）初始化集群
-
-在云上部署集群，和在虚拟机里面完全不一样，具体参考https://blog.csdn.net/xmcy001122/article/details/127221661，这部分只需要在master上执行。
-
-- 生成默认配置
-
-```bash
-[haojie@manager ~]$ kubeadm config print init-defaults > kubeadm-config.yaml
-```
-
-- 修改配置
-
-```bash
-...
-localAPIEndpoint:
-  advertiseAddress: 121.36.104.55  # 修改为本机地址
-  bindPort: 6443
-nodeRegistration:
-  criSocket: /var/run/dockershim.sock
-  imagePullPolicy: IfNotPresent
-  name: manager   # 修改为本机hostname
-  taints: null
----
-etcd:
-  local:
-    dataDir: /var/lib/etcd
-imageRepository: registry.aliyuncs.com/google_containers  # 修改为阿里云
-...
-```
-
-- 检查环境
-
-```bash
-[haojie@manager ~]$ sudo kubeadm init phase preflight --config=kubeadm-config.yaml
-```
-
-- 初始化集群
-
-```bash
-[haojie@manager ~]$ sudo kubeadm init --config=kubeadm-config.yaml
-```
-
-注意，这里一定会失败，但是不要紧。这次失败是为后续打基础。
-
-- 编辑etcd配置文件
-
-```bash
-[haojie@manager ~]$ sudo vim /etc/kubernetes/manifests/etcd.yaml
-```
-
-将
-
-```bash
-- --listen-client-urls=https://127.0.0.1:2379,https://101.34.112.190:2379    
-- --listen-peer-urls=https://101.34.112.190:2380
-```
-
-改为
-
-```bash
-- --listen-client-urls=https://127.0.0.1:2379
-- --listen-peer-urls=https://127.0.0.1:2380
-```
-
-- 停止已启动的进程
-
-```bash
-# 先停止kubelet
-[haojie@manager ~]$ systemctl stop kubelet 
-# 把所有kube的进程杀掉
-[haojie@manager ~]$ sudo netstat -anp |grep kube
-tcp        0      0 127.0.0.1:10257         0.0.0.0:*               LISTEN      22263/kube-controll
-tcp        0      0 127.0.0.1:10259         0.0.0.0:*               LISTEN      22351/kube-schedule
-unix  2      [ ]         DGRAM                    27060828 22263/kube-controll  @4572d
-unix  2      [ ]         DGRAM                    27061893 22351/kube-schedule  @4572f
-[haojie@manager ~]$ sudo kill -9 22263
-[haojie@manager ~]$ sudo kill -9 22351
-```
-
-注意，一定不要执行 `sudo kubeadm reset`，先 `systemctl stop kubelet `，然后手动通过 `netstat -anp |grep kube` 来找pid，再通过 `kill -9 pid` 强杀。否则又会`生成错误的etcd配置文件`，这里非常关键！
-
-- 重新初始化
-
-```bash
-[haojie@manager ~]$ sudo systemctl start kubelet
-[haojie@manager ~]$ sudo kubeadm init --config=kubeadm-config.yaml --skip-phases=preflight,certs,kubeconfig,kubelet-start,control-plane,etcd
-```
-
-如果一切正常，会有下面的输出
-
-```bash
-Your Kubernetes control-plane has initialized successfully!
-
-To start using your cluster, you need to run the following as a regular user:
-
-  mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-Alternatively, if you are the root user, you can run:
-
-  export KUBECONFIG=/etc/kubernetes/admin.conf
-
-You should now deploy a pod network to the cluster.
-Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
-  https://kubernetes.io/docs/concepts/cluster-administration/addons/
-
-Then you can join any number of worker nodes by running the following on each as root:
-
-kubeadm join 121.36.104.55:6443 --token abcdef.0123456789abcdef \
-    --discovery-token-ca-cert-hash sha256:af2a6e096cb404da729ef3802e77482f0a8a579fa602d7c071ef5c5415aac748
-```
-
-> 注意，这里的ip是master的ip才是正确的
-
-#### （3）创建必要文件
-
-这个文件是`kubectl`命令要读取的配置文件
-
-```bash
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-```
-
-此时可以查看节点情况
-
-```bash
-[haojie@manager ~]$ kubectl get nodes
-NAME      STATUS     ROLES                  AGE   VERSION
-manager   NotReady   control-plane,master   94s   v1.22.4
-```
-
-#### （4）加入集群
-
-在node节点上执行
-
-```bash
-[haojie@node01 ~]$ sudo kubeadm join 121.36.104.55:6443 --token abcdef.0123456789abcdef --discovery-token-ca-cert-hash sha256:d4944630be2fd6d5e42d503ae068916cd40bd5a0f365928ea9951cb45d9d062a
-[preflight] Running pre-flight checks
-	[WARNING SystemVerification]: this Docker version is not on the list of validated versions: 24.0.5. Latest validated version: 20.10
-[preflight] Reading configuration from the cluster...
-[preflight] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
-[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
-[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
-[kubelet-start] Starting the kubelet
-[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap...
-
-This node has joined the cluster:
-* Certificate signing request was sent to apiserver and a response was received.
-* The Kubelet was informed of the new secure connection details.
-
-Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
-```
-
-此时执行`kubectl get nodes`可以看到两个节点都加入进去了
-
-```bash
-[haojie@manager ~]$ kubectl get nodes
-NAME      STATUS     ROLES                  AGE   VERSION
-manager   NotReady   control-plane,master   13h   v1.22.4
-node01    NotReady   <none>                 12h   v1.22.4
-```
-
-此时状态都还是NotReady，需要安装插件。
-
-#### （4）网络插件安装
-
-网络插件有calico和flannel，更推荐用calico
-
-```bash
-[haojie@manager ~]$ curl https://docs.projectcalico.org/manifests/calico.yaml -O
-# 下载的文件并不是一个yaml, 还要继续下载
-[haojie@manager ~]$ curl https://docs.tigera.io/calico/latest/manifests/calico.yaml -O
-# 下载的文件仍旧不是一个yaml, 还要继续下载
-[haojie@manager ~]$ curl https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml -O
-```
-
-修改配置`calico.yaml`，在里面搜索192，将其改为`10.244.0.0/16`, 并将注释放开
-
-```bash
-- name: CALICO_IPV4POOL_CIDR
-  value: "10.244.0.0/16"
-```
-
-并新增
-
-```yaml
-- name: CLUSTER_TYPE
-  value: "k8s,bgp"
-- name: IP_AUTODETECTION_METHOD  # 新增
-  value: "interface=eth.*" # 新增
-```
-
-执行文件
-
-```bash
-[haojie@manager ~]$ kubectl create -f calico.yaml
-```
-
-等几分钟，就会发现状态变成Ready了。再查看一下系统pod的情况
-
-```bash
-# -A 等价于-n all-namespace
-[haojie@manager ~]$ kubectl get pod -A
-NAME                              READY   STATUS              RESTARTS        AGE
-coredns-7f6cbbb7b8-2bs8h          0/1     ContainerCreating   0               17m
-coredns-7f6cbbb7b8-jqbln          0/1     ContainerCreating   0               17m
-etcd-manager                      1/1     Running             3               17m
-kube-apiserver-manager            1/1     Running             329 (20m ago)   17m
-kube-controller-manager-manager   1/1     Running             8 (19m ago)     17m
-kube-proxy-42kgr                  1/1     Running             0               13m
-kube-proxy-sw6b4                  1/1     Running             0               17m
-kube-scheduler-manager            1/1     Running             8 (19m ago)     17m
-```
-
-前面两个还没有启动成功，查看日志
-
-```bash
-calico/node is not ready: BIRD is not ready: BGP not established with 192.168.0.73
-```
-
-> 参考博客的解决方案https://blog.51cto.com/heian99/3924711，将br对应的网络删掉，仍旧没有解决，这部分就先放着。
-
-#### （6）环境测试
+### 5. 环境测试
 
 - 部署nginx
 
@@ -501,29 +374,9 @@ service/nginx        NodePort    10.102.148.40   <none>        80:31724/TCP   2d
 
 - 在页面上查看nginx服务
 
-目前这里有个问题，可以通过腾讯云的ip+port访问，但是不能通过华为云的ip+port访问。服务是分配给了腾讯云，但是无论是k8s，还是swarm都可以端口共享，应该不存在这个问题。
-
-腾讯云
-
 <img src="assets/image-20230802195746309.png" alt="image-20230802195746309" style="zoom:50%;" />
 
-华为云：端口30161暴露了
-
-```bash
-[haojie@manager ~]$ sudo lsof -i:30161
-COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
-kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
-```
-
-但是telnet 30161这个端口不通
-
-```bash
-[haojie@node01 ~]$ telnet 121.36.104.55 30161
-Trying 121.36.104.55...
-telnet: connect to address 121.36.104.55: Connection timed out
-```
-
-#### （7）完全卸载
+### 6. 完全卸载
 
 - 停掉k8s相关服务
 
