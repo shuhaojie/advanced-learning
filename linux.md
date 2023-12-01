@@ -484,11 +484,181 @@ done
 
 ### 12. shell函数
 
+#### （1）定义函数
 
+要定义一个函数，可以使用以下语法：
+
+```bash
+function_name() {
+    # Commands and operations
+}
+```
+
+例如
+
+```bash
+print_hello() {
+    echo "Hello, world!"
+}
+```
+
+#### （2）使用函数
+
+```bash
+print_hello
+```
+
+#### （3）传递参数
+
+```bash
+greet_person() {
+    echo "Hello, $1!"
+}
+
+greet_person "Alice"
+greet_person "Bob"
+```
+
+#### （4）返回值
+
+```bash
+check_file_exists() {
+    if [ -e "$1" ]; then
+        return 0  # File exists
+    else
+        return 1  # File does not exist
+    fi
+}
+
+filename="example.txt"
+if check_file_exists "$filename"; then
+    echo "File exists."
+else
+    echo "File does not exist."
+fi
+```
 
 ### 13. awk
 
+#### （1）作用
 
+awk命令是用来处理表格数据的，可以把很多命令的输出理解为表格，例如`docker images`.可以利用awk命令来帮助我们做很多事情，例如要输出当前机器所有的镜像
+
+```bash
+[haojie@manager ~]docker images | awk 'NR>1 {print $1 ":" $2 }'
+dockerhub.datagrand.com/databj/sxboard/format_convert:release_ci_20220419_eda779c
+dockerhub.datagrand.com/ysocr/ocr_platform_api:release_ci_20230412_3d4f75c
+dockerhub.datagrand.com/idps/new_extract_html:ci_20230626_f2b5660
+dockerhub.datagrand.com/idps/fe_itp:ci_20230622_ad3176c
+dockerhub.datagrand.com/idps/new_extract_html:ci_20230622_a852b2b
+```
+
+这里的`$1`表示输出表格的第一列，`NR>1`表示输出大于第一行之外的所有行。
+
+#### （2）用法
+
+> 以下内容来自chatgpt，https://chat.openai.com/share/a026b623-c2f5-4fea-8ca1-ca57c40c5f4a
+
+awk的基本用法如下，它从输入文本中选择特定的行，并对这些行进行处理，以提取出想要的数据
+
+```bash
+awk [选项参数] 'pattern { action }' input_file
+```
+
+- `pattern`是一个条件，用于选择要处理的行。如果省略了条件，那么操作将适用于所有行。
+- `action`是一系列命令，它定义了在满足条件时要执行的操作。多个命令可以使用分号或换行分隔。
+- `input_file`是要处理的输入文件的名称。
+
+例如查找文件中包含mq关键字的镜像
+
+```bash
+[haojie@manager ~]awk '/mq/ {print $0}' images.txt
+dockerhub.datagrand.com/base_tools/rabbitmq:3.11.4-management
+dockerhub.datagrand.com/base_tools/rabbitmq:3.8.26
+```
+
+前面的`/mq`就是pattern，而后面的`{print $0}`则是去执行的具体指令
+
+#### （3）选项参数
+
+- `-F`参数：用于指定字段分隔符，让 `awk` 在处理输入数据时根据指定的分隔符将每一行划分成不同的字段。
+
+```bash
+[haojie@manager ~]cat data.txt
+Alice:25:F
+Bob:30:M
+Carol:28:F
+David:22:M
+# 这里","会空一格. 如果是"\t"，则会空4格
+[haojie@manager ~]awk -F ':' '{ print "Name: " $1, "Age: " $2 }' data.txt
+Name: Alice Age: 25
+Name: Bob Age: 30
+Name: Carol Age: 28
+Name: David Age: 22
+```
+
+- `-v`参数：用于在 `awk` 命令中定义变量并赋值。这样可以在 `awk` 脚本中使用这些变量来进行计算、处理数据等操作
+
+```
+[haojie@manager ~]awk -F ':' -v increment=5 '{ print "Name: " $1 ,"Age: " $2+increment }' data.txt
+Name: Alice Age: 30
+Name: Bob Age: 35
+Name: Carol Age: 33
+Name: David Age: 27
+```
+
+### 14. sed命令
+
+> 注意：这个命令在macOS上和Linux不太一样，操作的时候注意在linux上操作
+
+#### （1）作用
+
+sed命令根据指定的规则对文本进行转换、替换、删除等操作。`sed` 在文本处理和批量编辑中非常有用。
+
+#### （2）文本替换
+
+使用 `s` 命令可以替换文本中匹配某一模式的内容为指定的文本。
+
+- 替换文本
+
+```bash
+sed 's/old_text/new_text/' input.txt
+```
+
+这会在 `input.txt` 文件中将第一次出现的 `old_text` 替换为 `new_text`。
+
+- 替换所有匹配
+
+```bash
+sed 's/old_text/new_text/g' input.txt
+```
+
+通过在替换命令中添加 `g` 标志，`sed` 将替换所有出现的匹配项。
+
+- 原地编辑
+
+在实际使用中，经常需要加上`-i`选项，表示**原地编辑（in-place editing）**，
+
+```bash
+[haojie@manager ~]$ sed -i 's/node01/manager/g' linux.md
+```
+
+加上`-i`之后，会使文件发生改变，后面删除和新增同理，不再赘述
+
+#### （3）文本删除
+
+```bash
+sed '/pattern_to_delete/d' input.txt
+```
+
+这会删除包含指定模式的行。
+
+#### （4）文本添加
+
+```bash
+sed '3i\New line before' input.txt  # 在第3行之前添加文本
+sed '3a\New line after' input.txt   # 在第3行之后添加文本
+```
 
 ## 二、基础命令
 
@@ -640,9 +810,9 @@ wc [-c -m -l -w] 文件路径
   2  20 110 test.txt  # 2表示行数，20表示单词数，110表示字节数
 ```
 
-#### （3）管道符(｜)
+#### （3）管道符（`|`）
 
-管道符｜作用：将管道符左边命令的结果，作为右边命令的输入
+管道符`｜`作用：将管道符左边命令的结果，作为右边命令的输入
 
 <img src="./assets/image-20230522095234080.png" alt="image-20230522095234080" style="zoom:70%;" />
 
@@ -1041,7 +1211,7 @@ kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
 ```bash
 [haojie@manager ~]$ telnet 127.0.0.1 31724
 Trying 127.0.0.1...
-[haojie@node01 ~]$ telnet 121.36.104.55 31724
+[haojie@manager ~]$ telnet 121.36.104.55 31724
 Trying 121.36.104.55...
 ```
 
