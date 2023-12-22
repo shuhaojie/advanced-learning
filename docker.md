@@ -298,6 +298,20 @@ docker save: 将镜像制作为tar文件
 [haojie@localhost ~]$ docker save 9c7a54a9a43c | gzip > hello-world.tar
 ```
 
+拉取并导出某个stack的所有镜像
+
+```bash
+#!/bin/bash
+for i in $(cat image.txt);do
+    docker pull $i
+done
+save_path="./images"
+echo "start save images"
+mkdir -p $save_path
+out=$save_path/all_images.tgz && docker save $(cat image.txt) | gzip  > $out
+echo "end"
+```
+
 ### 9. 导入tar为镜像
 
 docker load: 导入使用docker save出的镜像
