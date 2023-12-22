@@ -275,6 +275,7 @@ docker push：将镜像上传到仓库。上传镜像要稍微复杂一些，它
 ```bash
 docker rmi <image_id> # 删除镜像.  
 docker rmi -f $(docker images -aq) # 删除所有镜像
+docker images | grep "datagrand" | awk '{print $3}' | xargs docker rmi -f  # 删除所有含datagrand关键字的镜像
 ```
 
 ### 7. 容器转镜像
