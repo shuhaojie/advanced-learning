@@ -662,7 +662,7 @@ docker build -t centos:python3 .
 
 #### （2）WORKDIR
 
-官方文档的说明,`WORKDIR`的作用是为`RUN`, `COPY`等指令设置工作目录，相当于cd到那个目录，然后执行对应的指令。如果没有设置`WORKDIR`，它会自动创建，默认是`/`，如果是从其他镜像开始构建的，那么`WORKDIR`就是其他镜像。
+官方文档的说明,`WORKDIR`的作用是为`RUN`, `COPY`等指令设置工作目录，**相当于cd到那个目录**，然后执行对应的指令。如果没有设置`WORKDIR`，它会自动创建，默认是`/`，如果是从其他镜像开始构建的，那么`WORKDIR`就是其他镜像。
 
 > The `WORKDIR` instruction sets the working directory for any `RUN`, `CMD`, `ENTRYPOINT`, `COPY` and `ADD` instructions that follow it in the `Dockerfile`. If the `WORKDIR` doesn’t exist, it will be created even if it’s not used in any subsequent `Dockerfile` instruction.
 
