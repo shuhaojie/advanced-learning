@@ -4,27 +4,14 @@
 
 ### 1. shell是什么？
 
-计算机操作的一般交互过程，**图形界面 <=> Shell/应用程序 <=> 内核 <=> 硬件**
-
-<img src="assets/image-20230811141054758.png" alt="image-20230811141054758" style="zoom:80%;" />
-
-- Shell：接受来自用户的指令，与内核进行沟通。
-- 内核：CPU调度、内存管理等
-- 硬件：负责具体运算的，如CPU、总线等。
-
-Shell分两大类
+Shell：接受来自用户的指令，与内核进行沟通。Shell分两大类
 
 - 图形界面Shell：例如Linux Shell，GNOME，KDE等
 - 命令行Shell：sh(/bin/sh)，bash(/bin/bash)，C Shell(/usr/bin/csh)等
 
 > Bash(Bourne Again Shell)，是Shell中的一种，也是大多数Linux 系统默认的 Shell。
 
-### 2. shell脚本与shell程序
-
-- shell 脚本：和Python脚本一样，是内在的命令文件
-- shell程序：第一节说的就是shell程序，接受来自用户的指令，并和内核进行沟通。
-
-### 3. shell变量
+### 2. shell变量
 
 #### （1）定义变量
 
@@ -52,49 +39,7 @@ for skill in Ada Coffe Action Java; do
 done
 ```
 
-### 4. shell字符串
-
-#### （1）单引号和双引号
-
-字符串可以用单引号，也可以用双引号，也可以不用引号。更推荐使用双引号，双引号支持变量或者转义符，单引号不支持。
-
-#### （2）拼接字符串
-
-```bash
-your_name="runoob"
-# 使用双引号拼接
-greeting="hello, "$your_name" !"
-greeting_1="hello, ${your_name} !"
-echo $greeting  $greeting_1
-
-# 使用单引号拼接
-greeting_2='hello, '$your_name' !'
-greeting_3='hello, ${your_name} !'
-echo $greeting_2  $greeting_3
-```
-
-输出结果
-
-```bash
-hello, runoob ! hello, runoob !
-hello, runoob ! hello, ${your_name} !
-```
-
-### 5. shell数组
-
-#### （1）定义数组
-
-```bash
-arr=("shu" "haojie")
-```
-
-#### （2）获取数组元素
-
-```bash
-echo ${arr[0]}
-```
-
-### 6. shell传递参数
+### 3. shell传递参数
 
 可以在执行shell脚本时，向shell脚本传递参数，例如
 
@@ -122,7 +67,7 @@ Shell 传递参数实例！
 第三个参数为：3
 ```
 
-### 7. shell运算符
+### 4. shell运算符
 
 #### （1）算术运算符
 
@@ -148,25 +93,6 @@ echo "两数之和为 : $val"
 | -ge    | 检测左边的数是否大于等于右边的，如果是，则返回 true。 | [ $a -ge $b ] 返回 false。 |
 | -le    | 检测左边的数是否小于等于右边的，如果是，则返回 true。 | [ $a -le $b ] 返回 true。  |
 
-```bash
-#!/bin/bash
-a=10
-b=20
-
-if [ $a -eq $b ]
-then
-   echo "$a -eq $b : a 等于 b"
-else
-   echo "$a -eq $b: a 不等于 b"
-fi
-```
-
-输出
-
-```bash
-10 -eq 20: a 不等于 b
-```
-
 #### （3）布尔运算符
 
 假定变量 a 为 10，变量 b 为 20
@@ -178,6 +104,9 @@ fi
 | -a     | 与运算，两个表达式都为 true 才返回 true。           | [ $a -lt 20 -a $b -gt 100 ] 返回 false。 |
 
 ```bash
+#!/bin/bash
+a=10
+b=20
 if [ $a -lt 100 -a $b -gt 15 ]
 then
    echo "$a 小于 100 且 $b 大于 15 : 返回 true"
@@ -203,7 +132,6 @@ fi
 
 ```bash
 #!/bin/bash
-
 a=10
 b=20
 
@@ -250,7 +178,7 @@ fi
 abc : 字符串不为空
 ```
 
-#### （6）文件测试运算符
+#### （6）文件运算符
 
 | 操作符  | 说明                                                         |
 | ------- | ------------------------------------------------------------ |
@@ -296,7 +224,7 @@ fi
 文件不是个目录
 ```
 
-### 8. shell输出命令
+### 5. shell输出命令
 
 #### （1）echo命令
 
@@ -371,7 +299,7 @@ printf "%-10s %-8s %-4.2f\n" 郭芙 女 47.9876
 
 - `%-4.2f` 指格式化为小数，其中 `.2` 指保留2位小数。
 
-### 9. if语句
+### 6. if语句
 
 ### （1）if
 
@@ -413,7 +341,7 @@ else
 fi
 ```
 
-### 10. for循环
+### 7. for循环
 
 for循环的格式如下
 
@@ -446,7 +374,7 @@ The value is: 4
 The value is: 5
 ```
 
-### 11. while循环
+### 8. while循环
 
 while循环的格式如下
 
@@ -482,7 +410,7 @@ done
 5
 ```
 
-### 12. shell函数
+### 9. shell函数
 
 #### （1）定义函数
 
@@ -538,7 +466,7 @@ else
 fi
 ```
 
-### 13. awk
+### 10. awk
 
 #### （1）作用
 
@@ -607,7 +535,7 @@ Name: Carol Age: 33
 Name: David Age: 27
 ```
 
-### 14. sed命令
+### 11. sed命令
 
 > 注意：这个命令在macOS上和Linux不太一样，操作的时候注意在linux上操作
 
@@ -1185,34 +1113,14 @@ IP	: 123.118.73.58
 运营商	: 联通
 ```
 
-### 5. 经典问题
-
-在k8s中，启动了nginx服务，按照教程，开放了外部的31724端口
+例如，在k8s中，网络不通，我们可以使用curl命令来检查联通性
 
 ```bash
-[haojie@manager ~]$ kubectl get service
-NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
-kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        18h
-nginx        NodePort    10.102.148.40   <none>        80:31724/TCP   4h12m
-```
+root@gateway-85d778b87-fcd2r:/app# curl --http0.9 rabbitmq:5672 --output -
 
-用lsof或者netstat查看端口占用情况，均显示端口被监听
+curl: (56) Recv failure: Connection reset by peer
 
-```bash
-[haojie@manager ~]$ sudo netstat -tunlp | grep 31724
-tcp        0      0 0.0.0.0:31724           0.0.0.0:*               LISTEN      27205/kube-proxy
-[haojie@manager ~]$ sudo lsof -i:31724
-COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
-kube-prox 27205 root   12u  IPv4 6482384      0t0  TCP *:31724 (LISTEN)
-```
-
-但是在本机或者其他机器上使用telnet命令，并没有通
-
-```bash
-[haojie@manager ~]$ telnet 127.0.0.1 31724
-Trying 127.0.0.1...
-[haojie@manager ~]$ telnet 121.36.104.55 31724
-Trying 121.36.104.55...
+AMQP
 ```
 
 ## 五、linux状态

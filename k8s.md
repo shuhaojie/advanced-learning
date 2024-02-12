@@ -126,11 +126,12 @@ Centos Linux 7.5.1804 (Core)
 
 kubernetes要求集群中的节点时间必须精确一直，这里使用chronyd服务从网络同步时间
 
-企业中建议配置内部的时间同步服务器
+企业中建议配置内部的时间同步服务器。如果没有的话，需要先安装`yum install chrony -y`
 
 ```bash
 # 启动chronyd服务
 [root@master ~]# systemctl start chronyd
+# 开机自启动chronyd服务
 [root@master ~]# systemctl enable chronyd
 [root@master ~]# date
 ```
@@ -140,10 +141,14 @@ kubernetes要求集群中的节点时间必须精确一直，这里使用chronyd
 kubernetes和docker 在运行的中会产生大量的iptables规则，为了不让系统规则跟它们混淆，直接关闭系统的规则
 
 ```bash
-# 1 关闭firewalld服务
+# 关闭firewalld服务
 [root@master ~]# systemctl stop firewalld
+# 检查firewalld是否关闭
+[root@master ~]# systemctl status firewalld
+# 防止开机自启动服务
 [root@master ~]# systemctl disable firewalld
 # 2 关闭iptables服务
+[root@master ~]# yum install iptables iptables-services
 [root@master ~]# systemctl stop iptables
 [root@master ~]# systemctl disable iptables
 ```
@@ -271,27 +276,38 @@ KUBE_PROXY_MODE="ipvs"
 
 #### （1）准备集群镜像
 
+在安装kubernetes集群之前，必须要提前准备好集群需要的镜像，所需镜像可以通过下面命令查看
+
 ```bash
-# 在安装kubernetes集群之前，必须要提前准备好集群需要的镜像，所需镜像可以通过下面命令查看
 [root@master ~]# kubeadm config images list
+```
 
-# 下载镜像
-# 此镜像kubernetes的仓库中，由于网络原因，无法连接，下面提供了一种替换方案
-images=(
-	kube-apiserver:v1.17.4
-	kube-controller-manager:v1.17.4
-	kube-scheduler:v1.17.4
-	kube-proxy:v1.17.4
-	pause:3.1
-	etcd:3.4.3-0
-	coredns:1.6.5
-)
+替换镜像
 
-for imageName in ${images[@]};do
-	docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName
-	docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName k8s.gcr.io/$imageName
-	docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName 
-done
+```bash
+[root@manager ~]$ vim kubeadm-config-image.yaml
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+imageRepository: registry.aliyuncs.com/google_containers
+```
+
+检查是否替换成功
+
+```bash
+[root@manager ~]$ kubeadm config images list --config kubeadm-config-image.yaml
+registry.aliyuncs.com/google_containers/kube-apiserver:v1.22.17
+registry.aliyuncs.com/google_containers/kube-controller-manager:v1.22.17
+registry.aliyuncs.com/google_containers/kube-scheduler:v1.22.17
+registry.aliyuncs.com/google_containers/kube-proxy:v1.22.17
+registry.aliyuncs.com/google_containers/pause:3.5
+registry.aliyuncs.com/google_containers/etcd:3.5.0-0
+registry.aliyuncs.com/google_containers/coredns:v1.8.4
+```
+
+拉取镜像
+
+```bash
+[root@manager ~]$ kubeadm config images pull --config kubeadm-config-image.yaml
 ```
 
 #### （2）集群初始化
@@ -305,6 +321,7 @@ done
 	--kubernetes-version=v1.17.4 \
 	--service-cidr=10.96.0.0/12 \
 	--pod-network-cidr=10.244.0.0/16
+	--
 # 创建必要文件
 [root@master ~]# mkdir -p $HOME/.kube
 [root@master ~]# sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
