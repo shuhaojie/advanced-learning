@@ -58,37 +58,18 @@ node：集群的数据平面，负责为容器提供运行环境。通俗来说�
 
 这样，外界用户就可以访问集群中的nginx服务了
 
-### 4. k8s基本概念
+### 4. k8s组件简介
 
-#### （1）Master
-
-集群控制节点，每个集群需要至少一个master节点负责集群的管控
-
-#### （2）Node
-
-工作负载节点，由master分配容器到这些node工作节点上，然后node节点上的docker负责容器的运行
-
-#### （3）Pod
-
-kubernetes的最小控制单元，容器都是运行在pod中的，一个pod中可以有1个或者多个容器
-
-#### （4）Controller
-
-pod虽然是k8s的最小控制单元，但是k8s很少直接控制pod。而是通过控制器来实现对pod的管理，比如启动pod、停止pod、伸缩pod的数量等等。k8s中最常见的控制器是：Deployment
-
-#### （5）Service
-
-pod对外服务的统一入口。例如下图中，**需要用到service，将外界的流量引进来**，交给tomcat，**通过service可以实现负载均衡的效果**。
+- Master：集群控制节点，每个集群需要至少一个master节点负责集群的管控
+- Node：工作负载节点，由master分配容器到这些node工作节点上，然后node节点上的docker负责容器的运
+- Pod：kubernetes的最小控制单元，容器都是运行在pod中的，一个pod中可以有1个或者多个容器
+- Controller：**pod虽然是k8s的最小控制单元，但是k8s很少直接控制pod，而是通过控制器来实现对pod的管理**。比如启动pod、停止pod、伸缩pod的数量等等。k8s中最常见的控制器是：Deployment
+- Service：pod对外服务的统一入口。例如下图中，**需要用到service，将外界的流量引进来**，交给tomcat，**通过service可以实现负载均衡的效果**。
 
 <img src="assets/image-20230426222911281.png" alt="image-20230426222911281" style="zoom:55%;" />
 
-#### （6）Label
-
-标签，用于对pod进行分类，同一类pod会拥有相同的标签。例如上图中，有三个pod是app:tomcat，**在service中，会定义一个选择器，根据标签对service进行选择**
-
-#### （7）NameSpace
-
-命名空间，用来隔离pod的运行环境。不同的namespace不能相互访问，类似于计算机网络中的vlan。
+- Label：标签，用于对pod进行分类，同一类pod会拥有相同的标签。例如上图中，有三个pod是app:tomcat，**在service中，会定义一个选择器，根据标签对service进行选择**
+- NameSpace：命名空间，用来隔离pod的运行环境。不同的namespace不能相互访问，类似于计算机网络中的vlan。
 
 ## 二、集群环境搭建
 
@@ -367,13 +348,13 @@ node01  Ready   <none>  22s   v1.17.4
 - 部署nginx
 
 ```bash
-kubectl create deployment nginx --image=nginx:1.14-alpne
+kubectl create Deployment nginx --image=nginx:1.14-alpne
 ```
 
 - 暴露端口
 
 ```bash
-kubectl expose deployment nginx --port=80 --type=NodePort
+kubectl expose Deployment nginx --port=80 --type=NodePort
 ```
 
 - 查看服务状态
@@ -429,26 +410,16 @@ sudo yum autoremove
 sudo reboot
 ```
 
-## 三、资源管理
+## 三、yaml和命令行
 
-### 1. 什么是资源？
-
-**在k8s中，所有的内容都抽象为资源，用户需要通过操作资源来管理k8s**。
-
-k8s的本质是一个集群系统，用户可以在集群中部署各种服务，**所谓的部署服务，其实就是在k8s集群中运行一个个的容器**，并将指定的程序跑在容器中。
-
-**k8s的最小管理单元是pod而不是容器**，所以只能将容器放在Pod中，**而k8s一般也不会直接管理Pod**，而是通过**Pod控制器**(例如下图中的6种控制器)来管Pod。
-
-Pod可以提供服务之后，就要考虑如何访问Pod中服务，k8s提供了**Service资源**实现这个功能。
-
-<img src="assets/image-20230501153455829.png" alt="image-20230501153455829" style="zoom:70%;" />
-
-### 2. yaml语言
+### 1. yaml语言介绍
 
 yaml语言是一个类似于json，xml的标记性语言。yaml语言需要注意以下几点:
 
 - 大小写敏感
 - 使用缩进表示层级关系，**缩进的空格数不重要，只要相同的层级的元素左对齐即可**，注意不要使用tab键
+
+### 2. yaml数据类型
 
 yaml支持以下几种数据类型：
 
@@ -482,60 +453,61 @@ yaml支持以下几种数据类型：
 
 yaml语言可以和json相互转换，见<https://www.json2yaml.com/>
 
-### 3. 资源管理方式
-
-#### （1）命令式对象管理
+### 3. 命令行
 
 直接使用命令去操作k8s资源。`kubectl`是k8s集群的命令行工具，通过它可以对集群进行管理，并在集群上进行容器化的安装部署。
 
 ```bash
-# 前两个参数必须，后两个可选
+# 前两个参数command和type必须，后两个可选
 kubectl [command] [type] [name] [flags]
 ```
 
-- command: 对资源执行的操作。
-  - 基本命令
-    - create：创建一个资源
-    - get：获取一个资源
-    - patch：更新一个资源
-    - delete：删除一个资源
-    - explain：展示资源文档
-  - 运行和调试
-    - run：在集群中运行一个指定的镜像
-    - expose：暴露资源位Service
-    - **describe**：显示资源内部信息。
-    - logs：输出容器在pod中的日志
-    - attach：进入运行中的容器
-    - exec：执行容器中的一个命令
-    - **scale**：扩充pod的数量
-  - 高级命令
-    - apply：通过文件对资源进行配置
-    - label：更新资源上的标签
-  - 其他命令
-    - version：查看版本
-    - cluster-info：集群信息
-- type: 指定资源类型
-  - 集群级别资源
-    - nodes：集群组成部分
-    - namespaces：隔离pod
-  - pod资源
-    - pods：装载容器
-  - pod资源控制器
-    - deployments
-    - replicasets
-    - jobs
-  - 服务发现资源
-    - services：统一pod对外接口
-    - ingress：统一pod对外接口
-  - 存储资源
-    - persistentvolumes：存储
-  - 配置资源
-    - configmaps：配置
-    - secrets：配置
-- name: 指定资源的名称，名称大小写敏感
-- flags: 指定额外的可选参数
+（1）command: 对资源执行的操作。
+- 基本命令：增删改查
+  - create：创建一个资源
+  - get：获取一个资源
+  - patch：更新一个资源
+  - delete：删除一个资源
+  - explain：展示资源文档
+- 运行和调试
+  - run：在集群中运行一个指定的镜像
+  - expose：暴露资源位Service
+  - **describe**：显示资源内部信息。
+  - logs：输出容器在pod中的日志
+  - attach：进入运行中的容器
+  - exec：执行容器中的一个命令
+  - **scale**：扩充pod的数量
+- 高级命令
+  - apply：通过文件对资源进行配置
+  - label：更新资源上的标签
+- 其他命令
+  - version：查看版本
+  - cluster-info：集群信息
 
-#### （2）命令式对象配置
+（2）type: 指定资源类型
+- 集群级别资源
+  - nodes：集群组成部分
+  - namespaces：隔离pod
+- pod资源
+  - pods：装载容器
+- pod资源控制器
+  - Deployments
+  - replicasets
+  - jobs
+- 服务发现资源
+  - services：统一pod对外接口
+  - ingress：统一pod对外接口
+- 存储资源
+  - persistentvolumes：存储
+- 配置资源
+  - configmaps：配置
+  - secrets：配置
+
+（3）name: 指定资源的名称，名称大小写敏感
+
+（4）flags: 指定额外的可选参数
+
+### 4. 命令行+yaml
 
 通过命令配置和配置文件去操作k8s资源。
 
@@ -565,22 +537,22 @@ spec:
 
 这种方式可以认为是`命令+yaml文件`
 
-#### （3）声明式对象配置
+### 5. apply命令
 
-通过**`apply`命令**和配置文件去操作k8s资源，这种方式仅用于新增和更新。
+还通过**`apply`命令**和配置文件去操作k8s资源，这种方式仅用于新增和更新。
 
 - 首先执行`kubectl apply -f nginx-pod.yaml`，发现创建了资源。
 - 然后再次执行`kubectl apply -f nginx-pod.yaml`，**发现说资源没有变动**。如果我们修改yaml文件里面的内容，此时会提示已更新。
 
 总结：**当资源不存在时，`apply`命令相当于创建，等于`create`。如果资源存在，就更新，相当于`patch`**。
 
-#### （4）总结
+### 6. 总结
 
 - 创建/更新资源，使用声明式对象配置，采用`kubectl apply -f XXX.yaml`
 - 删除资源，采用命令式对象配置，`kubectl delete -f XXX.yaml`
 - 查询资源，采用命令式对象管理，`kubectl get 资源名称`
 
-## 四、实战入门
+## 四、资源类型
 
 ### 1. Namespace
 
@@ -590,7 +562,7 @@ spec:
 
 主要作用是实现多套环境的资源隔离。 默认情况下，k8s中所有的pod是可以相互访问的，如果不想让两个pod相互访问，此时可以将它们放到两个Namespace中。
 
-<img src="assets/image-20230501215619689.png" alt="image-20230501215619689" style="zoom:60%;" />
+<img src="assets/image-20230501215619689.png" alt="image-20230501215619689" style="zoom:50%;" />
 
 ```bash
 # kubectl get ns                  
@@ -605,26 +577,28 @@ kube-system       Active   28d  # 所有集群组件会在这里
 
 所有**未指定Namespace的对象都会被分配到default的Namespace中**。例如如果我们创建一个pod，没有指定namespace，那么它会自动分配给default，因此**每个pod都有namespace**。
 
-#### （2）查看Namespace
+#### （2）增删改查
+
+> 1、查看namespace
 
 ```bash
 kubectl get ns default  # 查看命名空间
 kubectl describe ns default  # 描述命名空间
 ```
 
-#### （3）创建Namespace
+> 2、新增namespace
 
 ```
 kubectl create ns default
 ```
 
-#### （4）删除Namespace
+> 3、删除namespace
 
 ```
 kubectl delete ns default
 ```
 
-#### （5）指定Namespace
+> 4、指定namespace
 
 当我们查询资源时，如果不指定`-n namespace`，**那么它默认使用的是default这个namespace**
 
@@ -637,121 +611,9 @@ NAME                     READY   STATUS    RESTARTS   AGE
 nginx-6799fc88d8-vljg6   1/1     Running   0          15m
 ```
 
-而系统则有一些pods
-
-```bash
-[haojie@manager ~]$ kubectl get pods -n kube-system
-NAME                                       READY   STATUS    RESTARTS       AGE
-calico-kube-controllers-5d4b78db86-kknjm   1/1     Running   21 (47m ago)   2d5h
-calico-node-jhtql                          0/1     Running   0              2d5h
-calico-node-xd7xq                          0/1     Running   0              2d5h
-coredns-7f6cbbb7b8-2sc94                   1/1     Running   0              2d19h
-coredns-7f6cbbb7b8-fft6q                   1/1     Running   0              2d19h
-etcd-manager                               1/1     Running   1              2d19h
-kube-apiserver-manager                     1/1     Running   19 (48m ago)   2d19h
-kube-controller-manager-manager            1/1     Running   4 (99m ago)    2d19h
-kube-proxy-4sv7s                           1/1     Running   0              2d19h
-kube-proxy-dtj72                           1/1     Running   0              2d18h
-kube-scheduler-manager                     1/1     Running   4 (99m ago)    2d19h
-```
-
-### 2. Pod
-
-#### （1）作用 
-
-Pod是k8s进行管理的最小单元，**程序要运行必须部署在容器中，而容器必须部署在Pod中， Pod是一个或多个容器的组合**，这些容器共享存储、网络和命名空间，以及如何运行的规范。
-
 <img src="assets/image-20230501221054272.png" alt="image-20230501221054272" style="zoom:130%;" />
 
-k8s在集群启动之后，集群中的各个组件也是以pod方式运行的。
-
-```bash
-[haojie@manager ~]$ kubectl get pod -n kube-system
-NAME                                       READY   STATUS    RESTARTS          AGE
-calico-kube-controllers-5d4b78db86-kknjm   1/1     Running   487 (2d15h ago)   6d22h
-calico-node-jhtql                          0/1     Running   0                 6d22h
-calico-node-xd7xq                          0/1     Running   0                 6d22h
-coredns-7f6cbbb7b8-2sc94                   1/1     Running   0                 7d12h
-coredns-7f6cbbb7b8-fft6q                   1/1     Running   0                 7d12h
-etcd-manager                               1/1     Running   1                 7d12h
-kube-apiserver-manager                     1/1     Running   320 (2d15h ago)   7d12h
-kube-controller-manager-manager            1/1     Running   5 (3d23h ago)     7d12h
-kube-proxy-4sv7s                           1/1     Running   0                 7d12h
-kube-proxy-dtj72                           1/1     Running   0                 7d11h
-kube-scheduler-manager                     1/1     Running   5 (3d23h ago)     7d12h
-```
-
-可以看到第一节介绍的apiserver，controller-manager，scheduler等组件。
-
-#### （2）创建并运行pod
-
-和其他组件不同的是，创建pod并不是`kubectl create pod`命令来创建pod的，而是`kubectl run (pod名称)`来创建的。
-
-```bash
-[haojie@manager ~]$ kubectl create ns dev
-namespace/dev created
-# 命令格式 kubectl run (pod名称) [参数]
-[haojie@manager ~]$ kubectl run nginx --image=nginx:1.17.1 --port=80 --namespace dev
-pod/nginx created
-```
-
-#### （3）查看pod
-
-```bash
-# RESTARTS: 重启次数
-[haojie@manager ~]$ kubectl get pods -n dev
-NAME    READY   STATUS    RESTARTS   AGE
-nginx   1/1     Running   0          22m
-# 查看pod更详细的信息
-[haojie@manager ~]$ kubectl get pods -n dev -o wide
-NAME    READY   STATUS    RESTARTS   AGE   IP                NODE     NOMINATED NODE   READINESS GATES
-nginx   1/1     Running   0          23m   192.168.196.137   node01   <none>           <none>
-# 查看更加详细的信息，启动的时候如果有报错，可以通过这个命令看到
-[haojie@manager ~]$ kubectl describe pod nginx -n dev
-Name:         nginx
-Namespace:    dev
-Priority:     0
-Node:         node01/10.0.4.11
-Start Time:   Mon, 07 Aug 2023 09:39:34 +0800
-Labels:       run=nginx
-Annotations:  cni.projectcalico.org/containerID: 71ded401da30f0093d6ca8daf4fe00fdf27f18320f36c66435896c48af92df2f
-              cni.projectcalico.org/podIP: 192.168.196.137/32
-              cni.projectcalico.org/podIPs: 192.168.196.137/32
-Status:       Running
-IP:           192.168.196.137
-Containers:
-  nginx:
-    Container ID:   docker://160a3eceef8f5b9ff4e49b98a94eb1fb2f1b058531ed9a7cd7e40e6a162379bd
-    Image:          nginx:1.17.1
-    Image ID:       docker-pullable://nginx@sha256:b4b9b3eee194703fc2fa8afa5b7510c77ae70cfba567af1376a573a967c03dbb
-    Port:           80/TCP
-    Host Port:      0/TCP
-    State:          Running
-      Started:      Mon, 07 Aug 2023 09:39:36 +0800
-    Ready:          True
-    Restart Count:  0
-    Environment:    <none>
-    Mounts:
-      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zn4jl (ro)
-......
-Events:
-  Type    Reason     Age   From               Message
-  ----    ------     ----  ----               -------
-  Normal  Scheduled  29m   default-scheduler  Successfully assigned dev/nginx to node01
-  Normal  Pulled     29m   kubelet            Container image "nginx:1.17.1" already present on machine
-  Normal  Created    29m   kubelet            Created container nginx
-  Normal  Started    29m   kubelet            Started container nginx
-```
-
-在这里可以看到容器id，镜像id等信息
-
-#### （4）删除pod
-
-```bash
-kubectl delete pod nginx -n dev
-```
-
-### 3. Label
+### 2. Label
 
 #### （1）作用
 
@@ -767,7 +629,9 @@ kubectl delete pod nginx -n dev
 - 基于等式的：`name=slave`，选择所有`key=name`和`value=slave`的对象
 - 基于集合的：`name in (master, slave)`，选择所有`key=name`和`value=slave`或者`value=master`的对象。
 
-#### （3）新建Label
+#### （3）增删改查
+
+> 1、新增Label
 
 ```bash
 # version=1.0，标签名称
@@ -775,7 +639,7 @@ kubectl delete pod nginx -n dev
 pod/nginx labeled
 ```
 
-#### （4）查看Label
+> 2、查看Label
 
 ```bash
 [haojie@manager ~]$ kubectl get pod nginx -n dev --show-labels
@@ -783,7 +647,7 @@ NAME    READY   STATUS    RESTARTS   AGE   LABELS
 nginx   1/1     Running   0          78m   run=nginx,version=1.0
 ```
 
-#### （5）更新Label
+> 3、更新Label
 
 ```bash
 [haojie@manager ~]$ kubectl label pod nginx -n dev version=2.0 --overwrite
@@ -803,7 +667,7 @@ NAME    READY   STATUS    RESTARTS   AGE   LABELS
 nginx   1/1     Running   0          80m   name=backend,run=nginx,version=2.0
 ```
 
-#### （6）筛选Label
+> 4、筛选Label
 
 ```bash
 [haojie@manager ~]$ kubectl get pods -l "version=2.0" -n dev --show-labels
@@ -811,7 +675,7 @@ NAME    READY   STATUS    RESTARTS   AGE   LABELS
 nginx   1/1     Running   0          81m   name=backend,run=nginx,version=2.0
 ```
 
-#### （7）删除Label
+> 5、删除Label
 
 ```bash
 # 删除掉nginxpod这个pod的name标签, "name"加上“-”符号
@@ -822,252 +686,77 @@ NAME    READY   STATUS    RESTARTS   AGE   LABELS
 nginx   1/1     Running   0          84m   run=nginx,version=2.0
 ```
 
-### 4. Deployment
+## 五、pod详解
 
-> Deployment 可以简写为deploy
+### 1. Pod介绍
 
-#### （1）作用
+Pod是k8s进行管理的最小单元，**程序要运行必须部署在容器中，而容器必须部署在Pod中， Pod是一个或多个容器的组合**，这些容器共享存储、网络和命名空间，以及如何运行的规范。
 
-k8s中，Pod是最小的控制单元，**但是k8s很少直接控制Pod，一般都是通过Pod控制器来完成的**。Pod控制器用于pod的管理，确保pod资源符合预期(例如想要三个pod运行nginx服务)的状态，当pod资源出现故障时，会尝试进行重启或重建pod。**可以粗略的认为，deployment的目的是为了创建出pod**
+<img src="assets/image-20230501221054272.png" alt="image-20230501221054272" style="zoom:130%;" />
 
-k8s有多种Pod控制器，Deployment就是其中一种。
+k8s在集群启动之后，集群中的各个组件也是以pod方式运行的。
 
-![image-20230502130656640](assets/image-20230502130656640.png)
+```bash
+[haojie@manager ~]$ kubectl get pod -n kube-system
+NAME                                       READY   STATUS    RESTARTS          AGE
+etcd-manager                               1/1     Running   1                 7d12h
+kube-apiserver-manager                     1/1     Running   320 (2d15h ago)   7d12h
+kube-controller-manager-manager            1/1     Running   5 (3d23h ago)     7d12h
+kube-proxy-4sv7s                           1/1     Running   0                 7d12h
+kube-proxy-dtj72                           1/1     Running   0                 7d11h
+kube-scheduler-manager                     1/1     Running   5 (3d23h ago)     7d12h
+```
 
-#### （2）创建Deployment
+可以看到第一节介绍的apiserver，controller-manager，scheduler等组件。
 
-在高版本的k8s中，不能用上述的方式，而需要用如下命令
+### 2. 增删改查
+
+#### （1）新增pod
+
+和其他组件不同的是，创建pod并不是`kubectl create pod`命令来创建pod的，而是`kubectl run (pod名称)`来创建的。
 
 ```bash
 [haojie@manager ~]$ kubectl create ns dev
 namespace/dev created
-[haojie@manager ~]$ kubectl create deployment nginx --image=nginx:1.17.1 --port=80 --replicas=3 -n dev
-deployment.apps/nginx created
+# 命令格式 kubectl run (pod名称) [参数]
+[haojie@manager ~]$ kubectl run nginx --image=nginx:1.17.1 --port=80 --namespace dev
+pod/nginx created
 ```
 
-#### （3）查看Deployment
+#### （2）查看pod
 
 ```bash
-[haojie@manager ~]$ kubectl get deployment -n dev
-NAME    READY   UP-TO-DATE   AVAILABLE   AGE
-nginx   3/3     3            3           37s
-```
-
-也可以一起看deployment和pod，更好理解这种关系
-
-```bash
-[haojie@manager ~]$ kubectl get deployment,pod -n dev
-NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/nginx   3/3     3            3           4m54s
-
-NAME                         READY   STATUS    RESTARTS   AGE
-pod/nginx-5d5dd5dd49-446fc   1/1     Running   0          4m53s
-pod/nginx-5d5dd5dd49-f25kk   1/1     Running   0          4m53s
-pod/nginx-5d5dd5dd49-p7dn9   1/1     Running   0          4m53s
-```
-
-查看deployment更详细的信息
-
-```bash
-[haojie@manager ~]$ kubectl describe deployment -n dev
-Name:                   nginx
-Namespace:              dev
-CreationTimestamp:      Mon, 07 Aug 2023 11:15:43 +0800
-Labels:                 app=nginx
-Annotations:            deployment.kubernetes.io/revision: 1
-Selector:               app=nginx
-Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
-StrategyType:           RollingUpdate
-MinReadySeconds:        0
-RollingUpdateStrategy:  25% max unavailable, 25% max surge
-Pod Template:
-  Labels:  app=nginx
-  Containers:
-   nginx:
-    Image:        nginx:1.17.1
-    Port:         80/TCP
-    Host Port:    0/TCP
-    Environment:  <none>
-    Mounts:       <none>
-  Volumes:        <none>
-```
-
-在创建deployment的时候，**创建出来的三个pod其实是有相同的标签选择器**
-
-```bash
-[haojie@manager ~]$ kubectl get pods -n dev --show-labels
-NAME                     READY   STATUS    RESTARTS   AGE     LABELS
-nginx-5d5dd5dd49-446fc   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
-nginx-5d5dd5dd49-f25kk   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
-nginx-5d5dd5dd49-p7dn9   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
-```
-
-#### （4）删除Deployment
-
-```bash
-# deployment可以简写为deploy
-[haojie@manager ~]$ kubectl delete deploy nginx -n dev
-deployment.apps "nginx" deleted
-```
-
-删除deployment的时候，对应的pod也会被删除
-
-```bash
+# RESTARTS: 重启次数
 [haojie@manager ~]$ kubectl get pods -n dev
-No resources found in dev namespace.
+NAME    READY   STATUS    RESTARTS   AGE
+nginx   1/1     Running   0          22m
+# 查看pod更详细的信息
+[haojie@manager ~]$ kubectl get pods -n dev -o wide
+NAME    READY   STATUS    RESTARTS   AGE   IP                NODE     NOMINATED NODE   READINESS GATES
+nginx   1/1     Running   0          23m   192.168.196.137   node01   <none>           <none>
+# 查看更加详细的信息，启动的时候如果有报错，可以通过这个命令看到
+[haojie@manager ~]$ kubectl describe pod nginx -n dev
+Name:         nginx
+Namespace:    dev
+......
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  29m   default-scheduler  Successfully assigned dev/nginx to node01
+  Normal  Pulled     29m   kubelet            Container image "nginx:1.17.1" already present on machine
+  Normal  Created    29m   kubelet            Created container nginx
+  Normal  Started    29m   kubelet            Started container nginx
 ```
 
-#### （5）yaml文件创建Deployment
+在这里可以看到容器id，镜像id等信息
 
-```yaml
-# deployment的配置
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx
-  namespace: dev
-# 相当于命令行后面的--，额外参数
-spec:  
-  replicas: 3  # 副本数
-  selector:  # 选择器
-    matchLabels:
-      run: nginx  # 使用这个标签选择来和下面的pod建立对应关系
-  template:  # pod模板, 下面都是定义pod的一些参数
-    metadata:
-      labels:
-        run: nginx  # 和上面的matchLabels对应
-    spec:  # 容器, 定义容器的一些参数
-      containers:
-      - image: nginx:1.17.1
-        name: nginx
-        ports:
-        - containerPort: 80
-          protocol: TCP
-```
-
-注意上面的template，这个是pod模板。采用`kubectl create -f nginxpod.yaml`即可创建Deployment。
+#### （3）删除pod
 
 ```bash
-[haojie@manager ~]$ kubectl create -f nginx.yml
-deployment.apps/nginx created
-[haojie@manager ~]$ kubectl get deploy,pods -n dev
-NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/nginx   3/3     3            3           29s
-
-NAME                         READY   STATUS    RESTARTS   AGE
-pod/nginx-66ffc897cf-4svpr   1/1     Running   0          29s
-pod/nginx-66ffc897cf-8zsjm   1/1     Running   0          29s
-pod/nginx-66ffc897cf-t9lhb   1/1     Running   0          29s
+kubectl delete pod nginx -n dev
 ```
 
-### 5. Service
-
-> service 可以简写为svc
-
-#### （1）作用
-
-上面利用Deployment可以创建一组pod来提供高可用的服务，但是却存在如下问题
-
--  Pod IP会随着Pod的重建产生变化。例如重启后，Pod IP就会变更。
-- Pod IP仅仅是集群内可见的虚拟IP，外部无法访问。集群外部：任务不在k8s集群内的，都是集群外部。
-
-针对这两个问题，k8s设计了Service来解决这个问题。Service是一组同类Pod**对外的访问接口**，借助Service，应用可以方便地实现服务发现和负载均衡。
-
-<img src="assets/image-20230502205622864.png" alt="image-20230502205622864" style="zoom:67%;" />
-
-如上图所示，Deployment创建了三个Pod，当外部请求进来的时候，请求会首先到达Service，Service根据标签选择器，去选择对应的Pod来处理。在Service的整个生命周期，其IP地址都不会变。
-
-#### （2）暴露Service
-
-```bash
-# --name: svc名称
-# --port: Service监听的端口
-# --target-port: 转发给pod的端口
-# --type: ip类型
-[haojie@manager ~]$ kubectl expose deployment nginx --name=svc-nginx1 --type=ClusterIP --port=80 --target-port=80 -n dev
-service/svc-nginx1 exposed
-```
-
-这里是对nginx这个Deployment来进行Service暴露。**另外`type=ClusterIP`，是只有集群内的机器可以访问，如果想要机器外的可以访问，需要设置为`type=NodePort`类型。**
-
-```bash
-[haojie@manager ~]$ kubectl expose deployment nginx --name=svc-nginx2 --type=NodePort --port=80 --target-port=80 -n dev
-service/svc-nginx2 exposed
-```
-
-此时在集群外，可以通过**节点IP+端口**进行访问，注意不是CLUSTER-IP+端口。
-
-#### （3）查看Service
-
-```bash
-[haojie@manager ~]$ kubectl get svc -n dev
-NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
-svc-nginx1   ClusterIP   10.109.193.239   <none>        80/TCP         112s
-svc-nginx2   NodePort    10.106.229.214   <none>        80:30183/TCP   67s
-```
-
-此时通过前端访问到nginx服务
-
-<img src="assets/image-20230807141301871.png" alt="image-20230807141301871" style="zoom:30%;" />
-
-#### （4）访问Service
-
-集群内`type=ClusterIP`
-
-```bash
-curl 10.99.53.1:80
-```
-
-集群外`type=NodePort`
-
-```bash
-curl 10.103.78.97:31667
-```
-
-#### （5）删除Service
-
-```bash
-[haojie@manager ~]$ kubectl delete svc svc-nginx1 -n dev
-service "svc-nginx1" deleted
-[haojie@manager ~]$ kubectl delete svc svc-nginx2 -n dev
-service "svc-nginx2" deleted
-```
-
-#### （6）yaml文件创建Service
-
-```yaml
-# svc的配置
-apiVersion: v1  # 注意这个是v1
-kind: Service
-metadata:
-  name: svc-nginx
-  namespace: dev
-# 相当于命令行后面的--，额外参数
-spec:
-  ports:
-  - port: 80
-    protocol: TCP
-    targetPort: 80
-  selector:
-    run: nginx
-  type: ClusterIP  
-```
-
-创建的命令和之前的一样
-
-```bash
-[haojie@manager ~]$ kubectl create -f svc.yml
-service/svc-nginx created
-[haojie@manager ~]$ kubectl get svc -n dev
-NAME        TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)   AGE
-svc-nginx   ClusterIP   10.97.50.53   <none>        80/TCP    11s
-```
-
-## 五、pod详解
-
-### 1. pod介绍
-
-#### （1）pod结构
+### 3. pod结构
 
 每个Pod都可以包含一个或多个容器，这些容器分为两类
 
@@ -1078,7 +767,7 @@ svc-nginx   ClusterIP   10.97.50.53   <none>        80/TCP    11s
 
 <img src="assets/image-20230503085319866.png" alt="image-20230503085319866" style="zoom:67%;" />
 
-在前面deployment部分，我们用`kubectl describe deployment`可以看到两个容器
+在前面Deployment部分，我们用`kubectl describe Deployment`可以看到两个容器
 
 ```bash
 [haojie@manager ~]$ kubectl describe pod nginx-5d5dd5dd49-94ddr -n dev
@@ -1101,7 +790,7 @@ Containers:
 f6325f62f64f   registry.aliyuncs.com/google_containers/pause:3.5    "/pause"                  3 minutes ago   Up 3 minutes             k8s_POD_nginx-5d5dd5dd49-94ddr_dev_e1cb38cb-b15c-4b88-bf56-f21f548ab196_0
 ```
 
-#### （2）pod定义
+### 4. pod定义
 
 下面是一个较为完整的定义pod的yaml文件
 
@@ -1208,19 +897,10 @@ FIELDS:
      generation of an appropriate name automatically. Name is primarily intended
      for creation idempotence and configuration definition. Cannot be updated.
      More info: http://kubernetes.io/docs/user-guide/identifiers#names
-
-   namespace	<string>
-     Namespace defines the space within which each name must be unique. An empty
-     namespace is equivalent to the "default" namespace, but "default" is the
-     canonical representation. Not all objects are required to be scoped to a
-     namespace - the value of this field for those objects will be empty.
-
-     Must be a DNS_LABEL. Cannot be updated. More info:
-     http://kubernetes.io/docs/user-guide/namespaces
    ......
 ```
 
-### 2. pod.spec.containers的属性
+### 5. containers的属性
 
 在k8s，基本所有资源的一级属性都是一样的，主要包含5部分：
 - apiVersion: 版本，由kubernetes内部定义，版本号必须可以用`kubectl api-versions`查询到。
@@ -1444,30 +1124,493 @@ spec:
         memory: "10Mi"  # 内存限制
 ```
 
-### 3. pod生命周期
+## 六、pod控制器
 
-#### （1）概述
+### 0. 概述
 
-将pod对象从创建至终的这段时间范围称为pod的生命周期
+k8s中，Pod是最小的控制单元，**但是k8s很少直接控制Pod，一般都是通过Pod控制器来完成的**。Pod控制器用于pod的管理，确保pod资源符合预期的状态，当pod资源出现故障时，会尝试进行重启或重建pod。
 
-- pod创建过程
-- 运行初始化容器（init container，容器的一种，后面会介绍）过程
-- 运行主容器（也即用户容器）
-  - 容器启动后钩子函数（Post Start）、容器终止前钩子函数（Pre Stop）
-  - 容器的存活性探测（liveness probe）、就绪性探测（readiness probe）
-- pod终止过程
+按照类型分类，pod控制器可以分为如下四类
 
-<img src="assets/image-20230503221434513.png" alt="image-20230503221434513" style="zoom:80%;" />
+<img src="assets/image-20240303160429896.png" alt="image-20240303160429896" style="zoom:50%;" />
 
-在整个周期中，pod会出现5种状态
+### 1. ReplicaSet
 
-- 挂起（Pending）：apiserver已经创建了pod资源对象，但它尚未被调度完成或者仍处于下载镜像的过程中
-- 运行中（Running）：pod已经被调度至某节点，并且所有容器都已经被kubelet创建完成
-- 成功（Succeeded）：pod中的所有容器都已经成功终止并且不会被重启
-- 失败（Failed）：所有容器都已经终止，但至少有一个容器终止失败，即容器返回了非0值的退出状态
-- 未知（Unknown）：apiserver无法正常获取到pod对象的状态信息，通常由网络通信失败所导致
+#### （1）作用
 
-## 六、常见问题
+按照官网的解释，https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/，ReplicaSet 的目的是在任何给定时间维护一组稳定运行的副本Pod（**注意：不能直接在pod中设置副本数**）。因此，它通常用于保证指定数量的相同Pod的可用性。
+
+需要注意的是，**在ReplicaSet中，我们对容器所做的更新是不会更新过来的**，ReplicaSet仅仅只是去更新副本数，例如在SO答案https://stackoverflow.com/a/72448929/10844937中说的，在ReplicaSet中去更新容器的镜像，并不会生效。
+
+#### （2）创建ReplicaSet
+
+ReplicaSet的增删改查，和Deployment差不多，这里不重点介绍，参考后面Deployment部分
+
+### 2. Deployment
+
+#### （1）作用
+
+Deployment是一种更高的抽象，**它管理一个或多个ReplicaSet**。前面我们知道ReplicaSet是用来维护集群中运行的 Pod数量的，但是在实际操作的时候我们不会去直接使用 RS，而是会使用更上层的控制器，例如Deployment。
+
+Deployment相比ReplicaSet有两大优势：
+
+- ReplicaSet中，我们对容器所做的更新是不会更新过来的，而Deployment可以。
+- 滚动更新：当我们更新镜像时，Deployment会用滚动更新（Rolling Update）的方式来升级Pod，滚动更新对于线上服务需要做到不中断服务是非常重要的。
+
+<img src="assets/image-20240302202115792.png" alt="image-20240302202115792" style="zoom:50%;" />
+
+#### （2）新增Deployment
+
+yaml文件创建Deployment
+
+```yaml
+# Deployment的配置
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: dev
+# 相当于命令行后面的--，额外参数
+spec:  
+  replicas: 3  # 副本数
+  selector:  # 选择器
+    matchLabels:
+      run: nginx  # 使用这个标签选择来和下面的pod建立对应关系
+  template:  # pod模板, 下面都是定义pod的一些参数
+    metadata:
+      labels:
+        run: nginx  # 和上面的matchLabels对应
+    spec:  # 容器, 定义容器的一些参数
+      containers:
+      - image: nginx:1.17.1
+        name: nginx
+        ports:
+        - containerPort: 80
+          protocol: TCP
+```
+
+注意上面的template，这个是pod模板。采用`kubectl create -f nginxpod.yaml`即可创建Deployment。
+
+```bash
+[haojie@manager ~]$ kubectl create -f nginx.yml
+Deployment.apps/nginx created
+[haojie@manager ~]$ kubectl get deploy,pods -n dev
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+Deployment.apps/nginx   3/3     3            3           29s
+
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/nginx-66ffc897cf-4svpr   1/1     Running   0          29s
+pod/nginx-66ffc897cf-8zsjm   1/1     Running   0          29s
+pod/nginx-66ffc897cf-t9lhb   1/1     Running   0          29s
+```
+
+#### （3）查看Deployment
+
+```bash
+[haojie@manager ~]$ kubectl get Deployment -n dev
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+nginx   3/3     3            3           37s
+```
+
+也可以一起看Deployment和pod，更好理解这种关系
+
+```bash
+[haojie@manager ~]$ kubectl get Deployment,pod -n dev
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+Deployment.apps/nginx   3/3     3            3           4m54s
+
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/nginx-5d5dd5dd49-446fc   1/1     Running   0          4m53s
+pod/nginx-5d5dd5dd49-f25kk   1/1     Running   0          4m53s
+pod/nginx-5d5dd5dd49-p7dn9   1/1     Running   0          4m53s
+```
+
+在创建Deployment的时候，**创建出来的三个pod其实是有相同的标签选择器**
+
+```bash
+[haojie@manager ~]$ kubectl get pods -n dev --show-labels
+NAME                     READY   STATUS    RESTARTS   AGE     LABELS
+nginx-5d5dd5dd49-446fc   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
+nginx-5d5dd5dd49-f25kk   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
+nginx-5d5dd5dd49-p7dn9   1/1     Running   0          9m28s   app=nginx,pod-template-hash=5d5dd5dd49
+```
+
+#### （4）删除Deployment
+
+```bash
+# Deployment可以简写为deploy
+[haojie@manager ~]$ kubectl delete deploy nginx -n dev
+Deployment.apps "nginx" deleted
+```
+
+删除Deployment的时候，对应的pod也会被删除
+
+```bash
+[haojie@manager ~]$ kubectl get pods -n dev
+No resources found in dev namespace.
+```
+
+### 3. StatefulSet
+
+#### （1）为什么需要无状态？
+
+参考https://spacelift.io/blog/statefulset-vs-deployment
+
+假设在k8s中运行mysql数据库，并且副本数为3，其中第一个pod为主要角色（primary role），处理读写操作，其余两个Pod 作为 MySQL只读副本。连接到数据库的应用程序需要连接primary role的Pod才能接收读写访问权限。如果使用 Deployment 或 ReplicaSet，是不可能完成的，因为调度或复制更改会生成新的 Pod 标识，应用程序无法知道哪个 Pod 是主 MySQL 实例。
+
+而StatefulSet则可以解决这个问题，因为部署的三个pod会被分配一个可预知并且连续的网络标识，格式为 `<statefulset-name>-<pod-ordinal-index>`. 因此三个pod会被命名为
+
+- `mysql-0` – 第一个pod，primary role
+- `mysql-1` – 只读副本
+- `mysql-2` – 只读副本
+
+其他程序访问的时候，可以通过 `mysql-0` 来访问primary role。此外，这个方式还有个好处是， `mysql-0` 这个pod只有在副本数将为0时才会被删除，副本数被降为1或者2不会被删除，因为**StatefulSet的创建顺序是由小到大，删除顺序是由大到小**。
+
+#### （2）创建StatefulSet
+
+注意创建StatefulSet需要加上serviceName这个参数
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: mp3
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: "mysql"  # 注意，需要这个参数
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:latest
+          imagePullPolicy: Never
+          volumeMounts:
+            - name: mysql-volume
+              mountPath: /var/lib/mysql
+              subPath: mysql
+      volumes:
+      - name: mysql-volume
+        persistentVolumeClaim:
+          claimName: my-pvc
+```
+
+查看StatefulSet
+
+```bash
+[root@vm1022 microservices-python]# kubectl get sts -n mp3
+
+NAME  READY  AGE
+
+mysql  1/1   2m30s
+```
+
+### 4. DaemonSet
+
+### 5. Job
+
+### 6. CronJob
+
+## 七、k8s网络
+
+### 1. Service
+
+> service 可以简写为svc
+
+#### （1）作用
+
+上面利用Deployment可以创建一组pod来提供高可用的服务，但是却存在如下问题
+
+-  Pod IP会随着Pod的重建产生变化。例如重启后，Pod IP就会变更。
+-  Pod IP仅仅是集群内可见的虚拟IP，外部无法访问。集群外部：任务不在k8s集群内的，都是集群外部。
+
+针对这两个问题，k8s设计了Service来解决这个问题。Service是一组同类Pod**对外的访问接口**，借助Service，应用可以方便地实现服务发现和负载均衡。
+
+<img src="assets/image-20230502205622864.png" alt="image-20230502205622864" style="zoom:67%;" />
+
+如上图所示，Deployment创建了三个Pod，当外部请求进来的时候，请求会首先到达Service，Service根据标签选择器，去选择对应的Pod来处理。在Service的整个生命周期，其IP地址都不会变。
+
+#### （2）暴露Service
+
+- 命令行创建
+
+```bash
+# --name: svc名称
+# --port: Service监听的端口
+# --target-port: 转发给pod的端口
+# --type: ip类型
+[haojie@manager ~]$ kubectl expose Deployment nginx --name=svc-nginx1 --type=ClusterIP --port=80 --target-port=80 -n dev
+service/svc-nginx1 exposed
+```
+
+这里是对nginx这个Deployment来进行Service暴露。**另外`type=ClusterIP`，是只有集群内的机器可以访问，如果想要机器外的可以访问，需要设置为`type=NodePort`类型。**
+
+```bash
+[haojie@manager ~]$ kubectl expose Deployment nginx --name=svc-nginx2 --type=NodePort --port=80 --target-port=80 -n dev
+service/svc-nginx2 exposed
+```
+
+此时在集群外，可以通过**节点IP+端口**进行访问，注意不是CLUSTER-IP+端口。
+
+- yaml文件创建
+
+```yaml
+# svc的配置
+apiVersion: v1  # 注意这个是v1
+kind: Service
+metadata:
+  name: svc-nginx
+  namespace: dev
+# 相当于命令行后面的--，额外参数
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: nginx
+  type: ClusterIP  
+```
+
+创建的命令和之前的一样
+
+```bash
+[haojie@manager ~]$ kubectl create -f svc.yml
+service/svc-nginx created
+[haojie@manager ~]$ kubectl get svc -n dev
+NAME        TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)   AGE
+svc-nginx   ClusterIP   10.97.50.53   <none>        80/TCP    11s
+```
+
+#### （3）查看Service
+
+```bash
+[haojie@manager ~]$ kubectl get svc -n dev
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+svc-nginx1   ClusterIP   10.109.193.239   <none>        80/TCP         112s
+svc-nginx2   NodePort    10.106.229.214   <none>        80:30183/TCP   67s
+```
+
+此时通过前端访问到nginx服务
+
+<img src="assets/image-20230807141301871.png" alt="image-20230807141301871" style="zoom:30%;" />
+
+#### （4）访问Service
+
+集群内`type=ClusterIP`
+
+```bash
+curl 10.99.53.1:80
+```
+
+集群外`type=NodePort`
+
+```bash
+curl 10.103.78.97:31667
+```
+
+#### （5）删除Service
+
+```bash
+[haojie@manager ~]$ kubectl delete svc svc-nginx1 -n dev
+service "svc-nginx1" deleted
+[haojie@manager ~]$ kubectl delete svc svc-nginx2 -n dev
+service "svc-nginx2" deleted
+```
+
+### 2. Ingress
+
+
+
+## 七、k8s存储
+
+参考https://yuminlee2.medium.com/kubernetes-storage-fe5363d88d42
+
+### 1. 卷和挂载
+
+按照k8s官方文档的说法，卷(volumes)的本质是一个目录，其中可能包含一些数据，Pod 中的容器可以访问该目录。卷(volumes)和挂载(volumeMounts)的关系可以理解为：卷是一个光驱，挂载则是把这个光驱给加载进来。
+
+在yaml文件中，`volume` 字段用于定义一个卷，指定了存储数据的类型和配置。使用 `volumeMounts` 字段来指定将哪个卷挂载到容器的哪个路径上。例如下面的例子，定义了一个名为data-volume的卷，类型为hostPath，使用的是主机上的/mnt/data这个路径。
+
+<img src="assets/volume_mount.webp" alt="volume_mount" style="zoom:40%;" />
+
+相比PV和PVC，直接使用Volume的主要劣势在于：
+
+1. 会增加应用程序的复杂性，因为它们需要单独管理每个 Pod 的存储要求。
+
+### 2. pv和pvc
+
+#### （1）pv和pvc概念
+
+PV(PersistentVolume)持久化卷，PVC(PersistentVolumeClaim)。
+
+PV是集群中配置的存储资源，它具有独立于使用它的 Pod 的生命周期，**即使 Pod 被删除，数据也可以保留**， PV 可以是物理磁盘或基于云的存储资源。
+
+PVC是用户对存储的请求，**使用的时候只需要发出PVC请求，而无需知道存储来自何处的详细信息，k8s控制平面找到满足声明要求的可用 PV，并将声明绑定到 PV**。
+
+通俗理解，pv就是存储资源，例如硬盘、云存储等等，而pvc则负责“报价”即可：我需要的存储是多少。例如下图中的my-pvc，它的要求是存储为5Gi，此时k8s会从所有的存储资源中找合适的pv来满足它的要求。
+
+<img src="assets/pv_pvc.webp" alt="pv_pvc" style="zoom:40%;" />
+
+ k8s中PV和PVC之间是一对一的关系。一旦PVC绑定到PV，其他PVC就不能绑定到同一PV。
+
+#### （2）pv和pvc参数
+
+1、volumeMode：用于指定挂载到Pod中的Volume的模式，有两个选项
+
+- Filesystem：默认是这个，表示Volume将以文件系统的形式挂载到Pod中。
+
+- Block：以块设备的形式。
+
+2、accessModes：用于指定访问PV/PVC的模式
+
+- ReadWriteOnce：表示该存储可以被单个节点挂载为读写模式
+- ReadOnlyMany：表示该存储可以被多个节点挂载为只读模式
+- ReadWriteMany：表示该存储可以被多个节点挂载为读写模式
+
+3、persistentVolumeReclaimPolicy：用于指定PV回收策略的参数，当PV释放后应该如何处理PV中的数据。
+
+- Retain: 表示当PV释放后，保留其数据。PV的数据不会被删除，需要管理员手动处理。这个选项通常用于需要手动审查和清理数据的情况。
+- Delete: 表示当PV释放后，删除其数据。PV释放后，其中的数据将被立即删除。
+
+4、storageClassName：参考下面StorageClass
+
+### 3. 存储类
+
+#### （1）存储类概念
+
+为什么要有存储类(StorageClass)？前面PV/PVC模型，有个缺陷是需要手动的去创建PV，而PV的创建，在项目中通常是需要管理员在项目初期进行资源规划和管理的。
+
+存储类(StorageClass)的出现就是去解决这一问题的，如下图所示，对于开发者来说，当在PVC中指定了存储类之后，它便不需要手动去创建PV，**而是由存储类里的制备器根据需求去动态制备PV**。
+
+<img src="assets/image-20240229221441612.png" alt="image-20240229221441612" style="zoom:50%;" />
+
+#### （2）制备器
+
+参考https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner
+
+制备器有k8s官方的，以`kubernetes.io`开头，例如使用本地文件系统可以使用`kubernetes.io/no-provisioner`，也可以使用外部的，例如NFS就没有官方的制备器。
+
+### 4. 使用nas挂载
+
+卷和pv都可以使用nas挂载，下面以卷为例
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: mp3
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:latest
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: /var/lib/mysql
+      volumes:
+      - name: nfs-volume
+        nfs:
+          server: 10.2.11.226
+          path: /sdsfs/nfs-wkocr/volume_test
+```
+
+由于将`10.2.11.226:/sdsfs/nfs-wkocr`挂载到`/datagrand`目录，因此我们将`/datagrand/volume_test`这个目录作为挂载目录，这里等效于nfs的path就是`/sdsfs/nfs-wkocr/volume_test`，可以看到此时已经挂载好了。
+
+<img src="assets/image-20240229111109881.png" alt="image-20240229111109881" style="zoom:50%;" />
+
+使用pv/pvc接入nas
+
+（1）pv
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv
+  namespace: mp3
+spec:
+  capacity:
+    storage: 50G
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.2.11.226
+    path: /sdsfs/nfs-wkocr/volume_test
+```
+
+（2）pvc
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+  namespace: mp3
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 50G
+```
+
+（3）Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: mp3
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: mysql-configmap
+            - secretRef:
+                name: mysql-secret
+          volumeMounts:
+            - name: mysql-volume
+              mountPath: /var/lib/mysql
+              subPath: mysql
+      volumes:
+      - name: mysql-volume
+        persistentVolumeClaim:
+          claimName: my-pvc
+```
+
+## 八、常见问题
 
 ### 1. pod
 
