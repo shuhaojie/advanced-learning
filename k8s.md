@@ -1426,6 +1426,32 @@ service "svc-nginx2" deleted
 
 ### 2. Ingress
 
+### 3. NodeIP, PodIP, ClusterIP
+
+k8s中存在着几个IP，分别为NodeIP，PodIP，ClusterIP
+
+- Node IP：Node节点的IP地址，即物理网卡的IP地址。
+- Pod IP：Pod的IP地址，即docker容器的IP地址，此为虚拟IP地址。
+- Cluster IP：Service的IP地址，此为虚拟IP地址。
+
+1、NodeIP
+
+Node节点的IP地址，即物理网卡的IP地址。
+
+![image-20240312113048286](assets/image-20240312113048286.png)
+
+2、Pod IP
+
+Pod IP是每个Pod的IP地址，他是Docker Engine根据docker网桥的IP地址段进行分配的，通常是一个虚拟的二层网络
+
+<img src="assets/image-20240312113329972.png" alt="image-20240312113329972" style="zoom:33%;" />
+
+- 同Service下的pod可以直接根据PodIP相互通信
+- 不同Service下的pod在集群间pod通信要借助于 cluster ip
+- pod和集群外通信，要借助于node ip
+
+### 4. DNS
+
 
 
 ## 七、k8s存储

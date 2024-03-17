@@ -184,6 +184,8 @@ username = response1.json()['login']
 
 ### 2. 单点登录的实现
 
+参考https://www.jianshu.com/p/75edcc05acfd
+
 <img src="assets/image-20240217102816049.png" alt="image-20240217102816049" style="zoom:50%;" />
 
 图中有4个系统，分别是App1、App2、App3、和SSO。**App1、App2、App3没有登录模块，而SSO只有登录模块，没有其他的业务模块**，当App1、App2、App3需要登录时，将跳到SSO系统，SSO系统完成登录，其他的应用系统也就随之登录了。

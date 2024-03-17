@@ -815,81 +815,122 @@ ls > hello.txt # 将ls的内容覆盖写入到文件中
 tail [-f -num] linux路径
 ```
 
-### 8. vi
+### 8. vim
 
 命令模式快捷键
 
-```bash
-0: 移动光标到当前行的开头
-$(shift+4): 移动光标到当前行的结尾
-yy: 复制当前行
-p: 粘贴复制的内容
-u: 撤销修改
-gg: 跳到首行
-G: 跳到尾行
-```
+- `0`：移动光标到当前行的开头
+- `shift+4`：移动光标到当前行的结尾
+- `yy`：复制当前行
+- `p`：粘贴复制的内容
+- `u`: 撤销修改
+- `gg`: 跳到首行
+- `shift+g`: 跳到尾行
 
 底线模式快捷键
 
-```
-:set nu
-```
+- `:set nu`：查看行号
+- `:set paste`：粘贴模式
+- `:vs {filename}`：同时查看两个文件，filename为当前文件的相对路径
 
 ## 三、linux用户
 
-### 1. 切换用户
+### 1. 用户组
 
-- `su`: switch user，切换用户。不仅仅可以切换到root用户，也可以切换到其他用户。
+组分为主要组和附加组，在Linux中，一个用户只有一个主要组，可能会有多个附加组
 
-### 2. 用户和用户组
-
-一个用户可以在多个组，一个组可以有多个用户
-
-#### （1）用户组
+（1）创建用户组
 
 ```bash
 groupadd 用户组 # 创建用户组
 ```
 
-#### （2）用户
+（2）查看当前有哪些组
 
-- 创建用户
+```bash
+[root@vm1022 ~]# cat /etc/group
+root:x:0:
+haojie:x:1000:haojie
+```
+
+这个返回值的格式为`group_name:password:GID:user_list`
+
+- `group_name`：用户组的名称。
+- `password`：用户组密码，通常为空。
+- `GID`：用户组的组ID。
+- `user_list`：属于该用户组的用户列表，以逗号分隔。
+
+（3）查看用户组有哪些用户
+
+```bash
+[root@vm1022 ~]# getent group haojie
+haojie:x:1000:haojie
+```
+
+（4）将用户从用户组中删除
+
+```bash
+gpasswd -d {username} {groupname}
+```
+
+（5）将用户加到其他附加组
+
+```bash
+usermod -aG {groupname} {username}
+```
+
+（6）修改用户主要组
+
+```bash
+usermod -g {groupname} {username}
+```
+
+### 2. 用户
+
+（1）创建用户
 
 ```bash
 # -g 表示加入哪个用户组，不指定的话，会自动加入同名用户组
 # -d 创建home路径
-useradd [-g -d]用户名
+useradd [-g -d] {username}
 ```
 
-例如`adduser haojie -d /home/haojie`
+例如`useradd haojie -d /home/haojie -g haojie`
 
-- 删除用户
+（2）删除用户
 
 ```bash
 # -r 删除home路径
-userdel [-r] 用户名
+userdel [-r] {username}
 ```
 
-- 查看用户
+（3）查看用户
 
 ```bash
 # 不指定表示查看自己
-id [用户名]
+id {username}
 ```
 
-- 修改用户所在组
+例如
 
+```bash
+[haojie@vm1022 ~]$ id
+
+uid=1000(haojie) gid=0(root) groups=0(root),1000(haojie)
 ```
-usermod -aG 用户组 用户名
-```
+
+- UID（User ID）：用户id。
+- GID（Group ID）是用户所属的**主要组**（primary group）的标识符。
+- groups：用户所属的所有**附加组**
 
 ### 3. 权限
 
-通过ls -l命令可以看到如下内容
+通过`ls -l`命令可以看到如下内容
 
 ```bash
 [haojie@localhost ~]$ ls -l
 total 8
+# 第一列        第三列      第四列
 drwx------@  3 shuhaojie  staff    96  4 20 11:42 Applications
 drwxr-xr-x   3 shuhaojie  staff    96  4 26 15:54 DataGripProjects
 drwx------@  7 shuhaojie  staff   224  5 23 13:40 Desktop
@@ -898,9 +939,9 @@ drwx------@ 51 shuhaojie  staff  1632  5 22 18:42 Downloads
 drwx------@ 88 shuhaojie  staff  2816  5 22 16:01 Library
 ```
 
-- 第一列表示文件、文件夹的权限信息
-- 第三列表示文件、文件夹所属用户
-- 第四列表示文件、文件夹所属用户组
+- 第一列：表示文件、文件夹的权限信息，下面会具体介绍
+- 第三列：表示文件、文件夹**所属用户**
+- 第四列：表示文件、文件夹**所属用户组**
 
 #### （1）权限信息
 
@@ -908,81 +949,245 @@ drwx------@ 88 shuhaojie  staff  2816  5 22 16:01 Library
 
 <img src="./assets/image-20230524093259478.png" alt="image-20230524093259478" style="zoom:50%;" />
 
-
-
 例如`drwxr-xr-x`表达的意思为
 
-- d:这是一个文件夹
-- rwx:所属用户可读、可写、可执行
-- r-x：所属用户组可读、不可写、可执行
-- r-x：其他用户组可读、不可写、可执行
+- `d`：这是一个文件夹。`-`表示文件
+- `rwx`：所属用户可读、可写、可执行
+- `r-x`：所属用户组可读、不可写、可执行
+- `r-x`：其他用户（既不是该用户，又不是该用户组），可读、不可写、可执行
 
 #### （2）rwx
 
-- r：针对文件，可以查看文件内容；针对文件夹，可以查看文件夹内容，例如ls
-- w：针对文件，表示可以修改此文件；针对文件夹，可以在文件夹内创建、删除、改名等操作。
-- x：针对文件，表示可以将文件作为程序执行；针对文件夹，**表示可以更改工作目录到此文件夹，即`cd`命令**。
+- `r`：针对文件，可以查看文件内容；针对文件夹，可以查看文件夹内容，例如ls
+- `w`：针对文件，表示可以修改此文件；针对文件夹，可以在文件夹内创建、删除、改名等操作。
+- `x`：针对文件，表示可以将文件作为程序执行；针对文件夹，**表示可以更改工作目录到此文件夹，即`cd`命令**。
 
 ### 4. chmod命令
+
+全拼：change mode，控制用户对文件的权限的命令。注意：**只有文件或文件夹所属用户，或者root用户才能修改权限**
 
 ```bash
 # -R，修改文件夹时，文件夹内的全部内容也应用同样的操作
 chmod [-R] 权限 文件或文件夹
 ```
 
-注意：**只有文件或文件夹所属用户，或者root用户才能修改权限**
-
 ### 5. chown命令
 
-chown：修改文件或文件夹的所属用户、用户组。
+全拼：change owner，修改文件或文件夹的所属用户、用户组。注意：**只有root用户才能修改**
 
 ```bash
-# -R，同chmod
+# -R，同chmod，修改文件夹时，文件夹内的全部内容也应用同样的操作
 # :用于分割用户或者用户组
 chown [-R] [用户][:][用户组] 文件或文件夹
 ```
 
-注意：**只有root用户才能修改**
+例子
 
 ```bash
 chown root hello.txt  # 文件所属用户修改为root
 chown :root hello.txt # 文件所属用户组修改为root
 ```
 
-## 四、linux网络
-
-### 1. ip地址
-
-#### （1）特殊ip地址
-
-- 127.0.0.1：本机ip
-- 0.0.0.0：既可以代表本机ip，又可以代表表示所有ip
-
-#### （2）查看ip
+此外也可以通过uid，gid的方式来进行修改
 
 ```bash
-[haojie@master ~]$ ifconfig
-eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-        inet 10.0.4.11  netmask 255.255.252.0  broadcast 10.0.7.255
-				.......
+chown 1001:1001 hello.txt
 ```
 
-#### （3）域名解析
+## 四、linux网络
 
-![image-20230527101040796](assets/image-20230527101040796.png)
+参考https://www.bilibili.com/video/BV1dt4y1H7Zr/?vd_source=e204e7b48214ba273c6eb797fd8b7a51
 
-我们访问www.baidu.com，它的流程如下
+### 1. ifconfig
 
-1. 先查看本机是否有该域名的记录，`etc/hosts`
-2. 如果第一步没有，再联网去DNS服务器(114.114.114，8.8.8.8)询问
+#### （1）作用
 
-### 2. 端口
+允许用户查看当前系统上的网络接口的配置信息，如IP地址、子网掩码、MAC地址等。需要安装net-tools命令，`yum install net-tools`才能使用。
 
-#### （1）端口的定义
+#### （2）查看网络接口
 
-![image-20230527103954621](assets/image-20230527103954621.png)
+```bash
+ifconfig  # 查看所有网络接口
+ifconfig ens192  # 查看ens192的网络信息
+```
 
-计算机程序之间的通讯，通过IP只能锁定计算机，但是无法锁定具体的程序。通过端口可以锁定计算机上具体的程序，确保程序之间进行沟通。IP地址相当于小区地址，在小区内可以有许多住户(程序)，而门牌号(端口)就是各个住户(程序)的联系地址。
+这里以10.2.133.178这台机器为例，可以看到如下信息
+
+```bash
+[root@vm1022 ~]# ifconfig
+docker0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.1  netmask 255.255.0.0  broadcast 172.17.255.255
+        inet6 fe80::42:63ff:fe05:7d11  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:63:05:7d:11  txqueuelen 0  (Ethernet)
+        RX packets 421545  bytes 20116421 (19.1 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 553604  bytes 3380456978 (3.1 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+docker_gwbridge: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.18.0.1  netmask 255.255.0.0  broadcast 172.18.255.255
+        inet6 fe80::42:c5ff:febf:fbb5  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:c5:bf:fb:b5  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 107  bytes 7870 (7.6 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ens192: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.2.133.178  netmask 255.255.255.0  broadcast 10.2.133.255
+        inet6 fe80::5461:3a7a:5291:368a  prefixlen 64  scopeid 0x20<link>
+        inet6 fe80::f191:9da5:668:8a9e  prefixlen 64  scopeid 0x20<link>
+        inet6 fe80::aca2:4fc8:942b:44b4  prefixlen 64  scopeid 0x20<link>
+        ether 00:50:56:b6:dc:bc  txqueuelen 1000  (Ethernet)
+        RX packets 13846849  bytes 11797868465 (10.9 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 4409838  bytes 3016464102 (2.8 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 774378736  bytes 132452078205 (123.3 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 774378736  bytes 132452078205 (123.3 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+这里以ens192为例来说明
+
+- ens192：网络设备名称，对应的是`ifcfg-ens192`文件
+
+  ```bash
+  [root@vm1022 ~]# cat /etc/sysconfig/network-scripts/ifcfg-ens192
+  TYPE=Ethernet
+  PROXY_METHOD=none
+  BROWSER_ONLY=no
+  BOOTPROTO=none
+  DEFROUTE=yes
+  IPV4_FAILURE_FATAL=no
+  IPV6INIT=yes
+  IPV6_AUTOCONF=yes
+  IPV6_DEFROUTE=yes
+  IPV6_FAILURE_FATAL=no
+  IPV6_ADDR_GEN_MODE=stable-privacy
+  NAME=ens192
+  UUID=5d28ff7b-f908-46a7-9a66-914d66b4e390
+  DEVICE=ens192  # 设备名
+  ONBOOT=yes
+  IPADDR=10.2.133.178
+  PREFIX=24
+  GATEWAY=10.2.133.254
+  DNS1=10.1.32.147
+  IPV6_PRIVACY=no
+  DNS2=10.2.20.1
+  ZONE=public
+  ```
+
+- inet：ip地址，ipv4
+
+- flags：用于显示与网络接口相关的标志或状态信息
+
+  - UP：表示接口处于启用状态
+  - BROADCAST：接口支持广播传输模式
+  - RUNNING：接口处于活动状态，即正在发送或接收数据
+  - MULTICAST：接口支持组播传输模式
+  - MTU 1500：表示网络接口的最大传输单元为 1500 字节
+
+- netmask：子网掩码 
+
+- broadcast：广播地址
+
+- inet6：ip地址，ipv6
+
+- ether：网络接口的物理地址，也称为 MAC 地址
+
+- txqueuelen：它表示发送队列长度（Transmission Queue Length）
+
+- RX/TX：网卡收发流量数据包大小
+
+#### （3）常见网络接口
+
+还是前面的四个网络接口
+
+- ens192：有网卡的网络接口，一般这种是以ens，eth等开头
+- lo：回环接口（loopback interface）
+- docker0：docker在安装时创建的默认虚拟网络接口，用于Docker容器之间的通信，以及容器与宿主机之间的通信
+- docker_gwbridge：是Docker创建的另一个默认网络桥接接口。这个接口通常用于容器与宿主机之间的通信，特别是容器访问外部网络时。Docker 在安装时通常会创建这个接口，并将其用作默认的网关接口。容器通过 `docker_gwbridge` 接口连接到宿主机的物理网络，并通过宿主机的网络访问外部资源。
+
+#### （4）修改网络接口
+
+除了查看之外，ifconfig命令还可以用来修改网络接口
+
+1、启用/停止网卡
+
+```bash
+ifconfig eth0 down  # 停止网卡【高危操作，不要执行】
+ifconfig eth0 up  # 启用网卡
+```
+
+2、添加ip地址
+
+```bash
+# 给ens33添加一个新ip地址，需要后面加[:0]，保证不重复
+ifconfig ens33:0 192.168.178.111 netmask 255.255.255.0 up
+```
+
+3、修改mac地址信息
+
+```bash
+# 修改MAC地址
+ifconfig eth0 hw ether 00:AA:BB:CC:DD:EE
+```
+
+### 2. route
+
+#### （1）什么是路由？
+
+计算机之间的数据传输必须经过网络，网络可以直接两台计算机，也可以通过一个一个的节点去连接，路由可以理解为互联网的中转站，网络中的数据包就是通过一个个的路由器转发到目的地的。
+
+**网关，网络的关口，就好比家里的门一样，外出就得通过这个门，才能出去，数据也是一样，只能通过这个网关地址出外网。**
+
+<img src="assets/image-20240313094721204.png" alt="image-20240313094721204" style="zoom:33%;" />
+
+
+
+路由分为静态路由和动态路由，平时我们主要关注的是静态路由。
+
+静态路由：Linux机器上配置的都是静态路由，由运维人员通过route命令去管理
+
+动态路由：无需人为干预，由路由器、交换机自动分配规则而来
+
+#### （2）查看路由
+
+```bash
+[root@vm1022 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.2.133.254    0.0.0.0         UG    100    0        0 ens192
+10.2.133.0      0.0.0.0         255.255.255.0   U     100    0        0 ens192
+10.244.0.0      0.0.0.0         255.255.255.0   U     0      0        0 cni0
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+172.18.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker_gwbridge
+```
+
+- Destination：表示网络号，network的意思
+- Gateway：表示网关地址，0.0.0.0表示该陆游信息是由本机转发出去的
+- Genmask：子网掩码地址的表示，IP地址配上子网掩码，才是完整的网络信息
+- Flags：标记当前的网络状态。U：Up的状态；G：表示网关；
+
+### 3. ip命令
+
+### 4. netstat
+
+```bash
+[root@vm1022 ~]# netstat -tunlp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name      
+tcp        0      0 127.0.0.1:2379          0.0.0.0:*               LISTEN      22963/etcd
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      7401/sshd     
+tcp6       0      0 :::30058                :::*                    LISTEN      14095/dockerd
+```
 
 #### （2）lsof命令
 
@@ -1003,7 +1208,25 @@ netstat查看端口占用，需要安装`yum -y install net-tools`
 tcp6       0      0 :::8000                 :::*                    LISTEN      13841/dockerd
 ```
 
-### 3. 防火墙
+### 5. ping
+
+### 6. telnet
+
+Telnet命令的一些常见用途包括：
+
+（1）远程管理和维护：通过Telnet，系统管理员可以远程登录到服务器或网络设备上。需要注意的是，由于Telnet是以明文形式传输数据的，安全性上不如SSH（Secure Shell）。
+
+（2）调试网络服务：Telnet可以用来测试特定端口是否打开并且是否能够建立连接。重点介绍这个
+
+```bash
+[root@vm1022 ~]# telnet 10.2.134.17 50000
+Trying 10.2.134.17...
+Connected to 10.2.134.17.
+Escape character is '^]'.
+Connection closed by foreign host.
+```
+
+### 7. 防火墙
 
 #### （1）作用
 
@@ -1059,7 +1282,7 @@ service iptables start
 service iptables restart
 ```
 
-### 4. 网络请求
+### 8. 网络请求
 
 #### （1）ping
 

@@ -5,6 +5,7 @@ app = Flask(__name__)
 client_id = None
 client_secret = None
 
+
 @app.route('/')
 def login():
     return render_template('index.html')
@@ -16,7 +17,7 @@ def authorize_to_github():
     global client_secret
     client_id = request.form.get('client_id')
     client_secret = request.form.get('client_secret')
-    redirect_url = f'https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri=http://localhost:8080/oauth/redirect'
+    redirect_url = f'https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri=http://localhost:8081/oauth/redirect'
     return redirect(redirect_url)
 
 
@@ -49,4 +50,4 @@ def redirect_to():
 
 if __name__ == '__main__':
     # 启动Flask应用
-    app.run(debug=False, host='0.0.0.0', port=8080)
+    app.run(debug=False, host='0.0.0.0', port=8081)

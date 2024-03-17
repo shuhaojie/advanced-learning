@@ -220,6 +220,15 @@ overall progress: 2 out of 2 tasks
 verify: Service converged
 ```
 
+再比如更换节点
+
+```bash
+[duser@test155 ~]$ docker service update --constraint-add "node.labels.ip==155" idps-product-cczc_table-parser-slave
+idps-product-cczc_table-parser-slave
+overall progress: 0 out of 1 tasks
+1/1: starting
+```
+
 #### （7）docker service rm
 
 删除服务
