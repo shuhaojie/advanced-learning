@@ -621,7 +621,188 @@ server {
 }
 ```
 
+## 十、DNS
 
+### 1. DNS是什么？
 
+DNS（Domain Name System，域名系统）**是一个服务**，DNS 提供了一个分布式的命名系统，用于将域名（例如 www.example.com）映射到其对应的 IP 地址。它是互联网中的一个关键组件，用于解析域名并提供 IP 地址以进行通信。
 
+这里有个问题，DNS既然是一个服务，那么这个服务是部署在我们本机上的吗？
 
+并不是，通常在不需要做域名解析的情况下，我们是不需要部署DNS服务的。我们本地和DNS服务器直接采用DNS协议来进行通信，DNS 协议定义了客户端和服务器之间的通信规范，包括查询域名、获取 IP 地址等操作。DNS 协议通常运行在 UDP（User Datagram Protocol）或 TCP（Transmission Control Protocol）之上，并使用特定的端口号（默认为 UDP 的 53 端口）进行通信。
+
+### 2. nslookup
+
+安装`sudo yum install bind-utils`
+
+查看
+
+```bash
+[root@vm1022 ~]# nslookup baidu.com
+Server:		10.1.32.147
+Address:	10.1.32.147#53
+
+Non-authoritative answer:
+Name:	baidu.com
+Address: 110.242.68.66
+Name:	baidu.com
+Address: 39.156.66.10
+```
+
+### 3. dig
+
+```bash
+[root@vm1022 ~]# dig baidu.com
+
+; <<>> DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7_9.15 <<>> baidu.com
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23587
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 5, ADDITIONAL: 10
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;baidu.com.			IN	A
+
+;; ANSWER SECTION:
+baidu.com.		539	IN	A	39.156.66.10
+baidu.com.		539	IN	A	110.242.68.66
+
+;; AUTHORITY SECTION:
+baidu.com.		108177	IN	NS	ns7.baidu.com.
+baidu.com.		108177	IN	NS	ns1.baidu.com.
+baidu.com.		108177	IN	NS	ns3.baidu.com.
+baidu.com.		108177	IN	NS	ns4.baidu.com.
+baidu.com.		108177	IN	NS	ns2.baidu.com.
+
+;; ADDITIONAL SECTION:
+ns1.baidu.com.		108177	IN	A	110.242.68.134
+ns2.baidu.com.		9976	IN	A	220.181.33.31
+ns3.baidu.com.		60541	IN	A	36.155.132.78
+ns3.baidu.com.		60541	IN	A	153.3.238.93
+ns4.baidu.com.		11724	IN	A	111.45.3.226
+ns4.baidu.com.		11724	IN	A	14.215.178.80
+ns7.baidu.com.		108177	IN	A	180.76.76.92
+ns7.baidu.com.		108177	IN	AAAA	240e:940:603:4:0:ff:b01b:589a
+ns7.baidu.com.		108177	IN	AAAA	240e:bf:b801:1002:0:ff:b024:26de
+
+;; Query time: 2 msec
+;; SERVER: 10.1.32.147#53(10.1.32.147)
+;; WHEN: Thu Apr 11 16:25:22 HKT 2024
+;; MSG SIZE  rcvd: 328
+```
+
+## 十一、防火墙
+
+### 1. 作用
+
+防火墙是一种网络安全系统，它根据定义的规则来监视和控制传入和传出的网络流量。主要用于确定和阻止不受信任的网络访问系统。
+
+<img src="assets/image-20240317205342248.png" alt="image-20240317205342248" style="zoom:50%;" />
+
+在CentOS 7中，新引入了firewalld服务（防火墙），取代了CentOS 6之前的iptables服务。firewalld自身并不具备防火墙的功能，而是和iptables一样需要通过内核的netfilter来实现，也就是说firewalld和 iptables一样，他们的作用都是用于维护规则，而真正使用规则干活的是内核的netfilter。
+
+### 2. 启动/关闭firewalld
+
+前面说过linux默认使用firewalld防火墙，如果想换回iptables防火墙，可关闭firewalld并安装iptables。
+
+```bash
+# 查看防火墙状态，下面两条命令均可以
+firewall-cmd --state  # 关闭后显示notrunning，开启后显示running
+systemctl status firewalld  #
+# 关闭防火墙
+systemctl stop firewalld
+# 启动防火墙
+systemctl start firewalld
+```
+
+### 3. firewalld区域(zone) 
+
+### 4. firewalld规则(rules) 
+
+#### （1）添加firewalld规则
+
+例如要阻止10.2.133.215服务器访问8000端口，可以使用如何的命令
+
+```bash
+# 确定防火墙的默认区域
+[root@vm1022 ~]# firewall-cmd --get-default-zone
+public
+# 设置防火墙规则
+[root@vm1022 ~]# firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" source address="10.2.133.215" port port=8000 protocol=tcp reject'
+success
+# 启动8000端口
+[root@vm1022 ~]# python3 -m http.server
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+# 查看防火墙规则
+[root@vm1022 ~]# firewall-cmd --list-all --zone=public
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: ens192
+  sources: 
+  services: ssh dhcpv6-client
+  ports: 12010/tcp 12011/tcp 161/udp
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+	rule family="ipv4" source address="10.2.133.215" port port="8000" protocol="tcp" reject
+```
+
+此时可以在10.2.133.215服务器上发现已经无法telnet这个端口了
+
+```bash
+[root@manager ~]# telnet 10.2.133.178 8000
+Trying 10.2.133.178...
+telnet: connect to address 10.2.133.178: Connection refused
+```
+
+#### （2）取消规则
+
+```bash
+# 取消规则
+[root@vm1022 ~]# firewall-cmd --zone=public --remove-rich-rule='rule family="ipv4" source address="10.2.133.215" port port=8000 protocol=tcp reject'
+success
+[root@vm1022 ~]# firewall-cmd --reload
+```
+
+此时再telnet，仍然不能通，为什么？
+
+```bash
+[root@manager ~]# telnet 10.2.133.178 8000
+Trying 10.2.133.178...
+telnet: connect to address 10.2.133.178: Connection refused
+```
+
+### 5. iptables防火墙
+
+iptables防火墙启动/关闭/状态检查相关命令
+
+```bash
+# 查看防火墙状态
+service iptables status
+# 停止防火墙
+service iptables stop 
+# 启动防火墙
+service iptables start
+# 重启防火墙
+service iptables restart
+```
+
+## 十二、 抓包
+
+### 1. 什么是抓包
+
+抓包的实质是通过监听**网络接口**，捕获经过该接口的数据包，并将其记录下来，以供后续分析和处理。
+
+### 2. 如何抓包
+
+在linux中，
+
+`sudo tcpdump -i <interface> -w <output_file>`
+
+其中 `<interface>` 是要监听的网络接口，比如 `eth0`、`wlan0` 等。这将捕获经过指定网络接口并目标端口为 80 的所有数据包。

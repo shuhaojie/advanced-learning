@@ -1325,7 +1325,7 @@ mysql  1/1   2m30s
 
 #### （1）作用
 
-上面利用Deployment可以创建一组pod来提供高可用的服务，但是却存在如下问题
+利用Deployment可以创建一组pod来提供高可用的服务，但是却存在如下问题
 
 -  Pod IP会随着Pod的重建产生变化。例如重启后，Pod IP就会变更。
 -  Pod IP仅仅是集群内可见的虚拟IP，外部无法访问。集群外部：任务不在k8s集群内的，都是集群外部。
@@ -1450,11 +1450,15 @@ Pod IP是每个Pod的IP地址，他是Docker Engine根据docker网桥的IP地址
 - 不同Service下的pod在集群间pod通信要借助于 cluster ip
 - pod和集群外通信，要借助于node ip
 
+3、Cluster IP
+
+
+
 ### 4. DNS
 
 
 
-## 七、k8s存储
+## 八、k8s存储
 
 参考https://yuminlee2.medium.com/kubernetes-storage-fe5363d88d42
 
@@ -1636,7 +1640,7 @@ spec:
           claimName: my-pvc
 ```
 
-## 八、常见问题
+## 九、常见问题
 
 ### 1. pod
 

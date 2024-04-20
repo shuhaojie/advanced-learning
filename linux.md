@@ -1176,9 +1176,11 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 - Genmask：子网掩码地址的表示，IP地址配上子网掩码，才是完整的网络信息
 - Flags：标记当前的网络状态。U：Up的状态；G：表示网关；
 
-### 3. ip命令
+### 3. netstat
 
-### 4. netstat
+#### （1）基本用法
+
+查看端口占用
 
 ```bash
 [root@vm1022 ~]# netstat -tunlp
@@ -1189,34 +1191,55 @@ tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      
 tcp6       0      0 :::30058                :::*                    LISTEN      14095/dockerd
 ```
 
-#### （2）lsof命令
+- -t：tcp协议
+- -u：udp协议
+- -n：显示数值格式的地址和端口号，而不是将其解析为主机名和服务名
+- -l：仅显示正在监听（listening）的连接
+- -p：显示正在使用该连接的进程的 PID 和名称
 
-查看端口占用情况，注意，该命令需要用root用户
+#### （2）lsof
 
-```bash
-[haojie@manager ~]$ sudo lsof -i:8000
-COMMAND   PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
-dockerd 13841 root   47u  IPv6 5149361      0t0  TCP *:irdmi (LISTEN)
-```
-
-#### （3）netstat命令
-
-netstat查看端口占用，需要安装`yum -y install net-tools`
+losf：是 "List Open Files" 的缩写，列出当前系统上所有打开的文件以及这些文件被哪些进程使用
 
 ```bash
-[haojie@manager ~]$ sudo netstat -tunlp | grep 8000
-tcp6       0      0 :::8000                 :::*                    LISTEN      13841/dockerd
+[root@vm1022 ~]# lsof -i:30058
+COMMAND   PID USER   FD   TYPE    DEVICE SIZE/OFF NODE NAME
+dockerd 14095 root  273u  IPv6 926450209      0t0  TCP *:30058 (LISTEN)
 ```
 
-### 5. ping
+在LInux环境下，任何事物都以文件的形式存在，通过文件不仅仅可以访问常规数据，还可以访问网络连接和硬件。所以如传输控制协议 (TCP) 和用户数据报协议(UDP)套接字，系统在后台都为该应用程序分配了一个文件描述符。
 
-### 6. telnet
+### 4. ping
 
-Telnet命令的一些常见用途包括：
+测试当前主机到目标机器的网络联通性
 
-（1）远程管理和维护：通过Telnet，系统管理员可以远程登录到服务器或网络设备上。需要注意的是，由于Telnet是以明文形式传输数据的，安全性上不如SSH（Secure Shell）。
+```bash
+[root@vm1022 ~]# ping 10.2.134.17
+PING 10.2.134.17 (10.2.134.17) 56(84) bytes of data.
+64 bytes from 10.2.134.17: icmp_seq=1 ttl=63 time=0.188 ms
+64 bytes from 10.2.134.17: icmp_seq=2 ttl=63 time=0.187 ms
+64 bytes from 10.2.134.17: icmp_seq=3 ttl=63 time=0.167 ms
+64 bytes from 10.2.134.17: icmp_seq=4 ttl=63 time=0.157 ms
+```
 
-（2）调试网络服务：Telnet可以用来测试特定端口是否打开并且是否能够建立连接。重点介绍这个
+第一行：表示向目标主机发送了56字节的数据
+
+第二行：
+
+- 64：表示目标主机返回了64字节的数据
+-  icmp_seq表示收到的字节数据序列号，ping就是用的icmp协议
+- ttl表示数据包的存活时间，单位为秒
+- time表示延迟时间，延迟时间越短，说明两台机器之间网络联通性越好。
+
+### 5. telnet
+
+#### （1）基本用法
+
+Telnet是应用层协议，类似于ssh/http。Telnet命令的一些常见用途包括：
+
+1、远程管理和维护：通过Telnet，系统管理员可以远程登录到服务器或网络设备上。需要注意的是，由于Telnet是以明文形式传输数据的，安全性上不如SSH（Secure Shell）。
+
+2、调试网络服务：Telnet可以用来测试特定端口是否打开并且是否能够建立连接。重点介绍这个
 
 ```bash
 [root@vm1022 ~]# telnet 10.2.134.17 50000
@@ -1226,108 +1249,40 @@ Escape character is '^]'.
 Connection closed by foreign host.
 ```
 
-### 7. 防火墙
+#### （2）ping和 telnet的联系
+
+这里思考两个问题
+
+1、telnet如果是通的，是否ping一定是通的？
+
+答：不一定，这是因为第一二者走的不是同一个协议。ping是icmp协议，而telnet是tcp/ip协议，例如icmp是国道，tcp/ip是高速公路，完全可以禁止国道(icmp)，只放行高速公路(tcp/ip)。
+
+2、ping通了，telnet/ssh/http不通，有哪些原因？
+
+答：成功 ping 仅意味着机器可访问。要使 telnet、ssh、smtp、http 等服务正常工作，必须满足以下两点。 
+
+1. 端口必须是开放的，即不被防火墙阻止、不被主机关闭。
+2. 服务（如 telnet）必须监听开放端口。
+
+### 6. curl
+
+参考https://www.ruanyifeng.com/blog/2019/09/curl-reference.html
 
 #### （1）作用
 
-防火墙的作用是内部网络和外部网络隔离。通常，防火墙可以保护内部/私有局域网免受外部攻击，并防止重要数据泄露。
+curl命令的作用非常丰富，主要包括
 
-<img src="assets/image-20230731145544911.png" alt="image-20230731145544911" style="zoom:40%;" />
+- **发送 HTTP 请求**：可以用来发送 GET、POST、PUT、DELETE 等 HTTP 请求到服务器，并获取服务器的响应。
+- **检查网络连接**：可以用 `curl` 命令测试网络连接是否正常，例如测试网络服务是否可达、端口是否开放等。
 
-#### （2）firewall防火墙
+- **下载文件**：可以使用 `curl` 下载文件，支持 HTTP、FTP 等协议。
+- **上传文件**：除了下载文件，`curl` 还支持文件上传到服务器，比如通过 FTP 或 HTTP 协议。
 
-CentOS7 默认使用firewalld防火墙，如果想换回iptables防火墙，可关闭firewalld并安装iptables。
+#### （2）HTTP请求
 
-- 查看防火墙状态
+##### 1、GET请求
 
-```bash
-firewall-cmd --state  # 关闭后显示notrunning，开启后显示running
-```
-
-- 关闭防火墙
-
-```bash
-systemctl stop firewalld
-```
-
-- 启动防火墙
-
-```bash
-systemctl start firewalld
-```
-
-#### （3）iptables防火墙
-
-- 查看防火墙状态
-
-```bash
-service iptables status
-```
-
-- 停止防火墙
-
-```bash
-service iptables stop 
-```
-
-- 启动防火墙
-
-```bash
-service iptables start
-```
-
-- 重启防火墙
-
-```bash
-service iptables restart
-```
-
-### 8. 网络请求
-
-#### （1）ping
-
-检查指定的网络服务器是否连通
-
-```bash
-[haojie@manager ~]$ ping baidu.com
-PING baidu.com (110.242.68.66) 56(84) bytes of data.
-64 bytes from 110.242.68.66 (110.242.68.66): icmp_seq=1 ttl=48 time=11.1 ms
-64 bytes from 110.242.68.66 (110.242.68.66): icmp_seq=2 ttl=48 time=11.0 ms
---- baidu.com ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2002ms
-rtt min/avg/max/mdev = 10.952/11.022/11.111/0.108 ms
-```
-
-#### （2）telnet
-
-用于检查服务器上是否打开特定端口，这个服务器可以是别人的服务器，例如检查百度的服务器是否开放
-
-```bash
-[haojie@manager ~]$ telnet 110.242.68.66 443
-Trying 110.242.68.66...
-Connected to 110.242.68.66.
-Escape character is '^]'.
-```
-
-#### （3）wget
-
-在命令行内下载网络文件
-
-```bash
-# -b 表示后台下载
-wget [-b] url
-```
-
-#### （4）curl
-
- curl可以发送http网络请求，可用于下载文件、获取信息等
-
-```bash
-# -O用于下载文件
-curl [-O] url
-```
-
-例如向cip.cc网站发送get请求
+curl命令不加任何参数时，就是发送GET请求，例如向cip.cc网站发送get请求
 
 ```bash
 [haojie@master ~]$ curl cip.cc
@@ -1336,15 +1291,108 @@ IP	: 123.118.73.58
 运营商	: 联通
 ```
 
-例如，在k8s中，网络不通，我们可以使用curl命令来检查联通性
+##### 2、-X参数
+
+`-X`参数指定 HTTP 请求的方法。
 
 ```bash
-root@gateway-85d778b87-fcd2r:/app# curl --http0.9 rabbitmq:5672 --output -
-
-curl: (56) Recv failure: Connection reset by peer
-
-AMQP
+curl -X POST https://www.example.com
 ```
+
+上面命令对`https://www.example.com`发出 POST 请求
+
+##### 3、-d参数
+
+`-d`参数用于发送 POST 请求的数据体。
+
+```bash
+curl -d'login=emma＆password=123'-X POST https://google.com/login
+```
+
+使用`-d`参数以后，HTTP 请求会自动加上标头`Content-Type : application/x-www-form-urlencoded`。并且会自动将请求转为POST方法，因此可以省略`-X POST`。
+
+##### 4、-F参数
+
+```
+curl -F 'file=@photo.png' https://google.com/profile
+```
+
+##### 5、-H参数
+
+`-H`参数添加 HTTP 请求的标头。
+
+```bash
+curl -d '{"login": "emma", "pass": "123"}' -H 'Content-Type: application/json' https://google.com/login
+```
+
+上面命令添加 HTTP 请求的标头是`Content-Type: application/json`，然后用`-d`参数发送 JSON 数据。
+
+#### （3）检查网络连接
+
+curl命令经常用来检查网络连通性，最常用的就是HTTP协议，例如
+
+![image-20240405192903377](assets/image-20240405192903377.png)
+
+这里还有两个问题：
+
+1、如果是POST请求，例如ysocr暴露的50000端口，可以用curl命令来检查网络的连通性吗？
+
+答：可以的，例如ysocr暴露的50000端口，curl 50000端口的时候可以看到服务端返回了404响应，有响应说明连接已经建立成功了。但是如果随便curl一个端口，返回的是Failed connect to，这个是客户端响应，不是服务端响应。
+
+```bash
+[root@vm1022 ~]# curl 10.2.134.17:50000
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+[root@vm1022 ~]# curl 10.2.134.17:50001
+curl: (7) Failed connect to 10.2.134.17:50001; Connection refused
+```
+
+2、一些非HTTP协议，例如MySQL协议，amqp协议，也可以用curl命令来检查网络连通性吗？
+
+答：可以的，例如在web_api容器中，curl 5672端口，会有服务端的响应。但是随便curl一个端口，例如5673端口，就是Failed to connect，客户端响应。
+
+```bash
+root@27ad5f5423b9:/datagrand/web_api# curl rabbitmq:5672 --output -
+curl: (56) Recv failure: Connection reset by peer
+AMQP	
+root@27ad5f5423b9:/datagrand/web_api# curl rabbitmq:5673 --output -
+curl: (7) Failed to connect to rabbitmq port 5673: Connection refused
+```
+
+对于mysql也是一样
+
+```
+root@27ad5f5423b9:/datagrand/web_api# curl mysql:3306 --output -
+J
+5.7.31	7I|35_ÿÿàÿÁcsn]p"EhD*mysql_native_password!ÿ#08S01Got packets out of order
+root@27ad5f5423b9:/datagrand/web_api# curl mysql:3307 --output -
+curl: (7) Failed to connect to mysql port 3307: Connection refused
+```
+
+
+
+#### （4）下载文件
+
+curl可以发送http网络请求，可用于下载文件、获取信息等
+
+```bash
+curl -O https://www.example.com/foo/bar.html
+```
+
+上面命令将服务器回应保存成文件，文件名为`bar.html`
+
+### 7. wget
+
+在命令行内下载网络文件
+
+```bash
+# -b 表示后台下载
+wget [-b] url
+```
+
+
 
 ## 五、linux状态
 
@@ -1523,7 +1571,7 @@ HOME=/home/haojie
 
 之所以我们在任意目录都可以执行`cd`命令，是因为`cd`命令的二进制文件加入到环境变量`PATH`中了
 
-### 2. $符合
+### 2. $符号
 
 `$`符合用于取"变量"的值，可以通过`$环境变量名`来取得环境变量的值，例如`echo $PATH`，就可以取得`PATH`这个环境变量的值了。
 
