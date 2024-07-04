@@ -1334,7 +1334,7 @@ mysql  1/1   2m30s
 
 <img src="assets/image-20230502205622864.png" alt="image-20230502205622864" style="zoom:67%;" />
 
-如上图所示，Deployment创建了三个Pod，当外部请求进来的时候，请求会首先到达Service，Service根据标签选择器，去选择对应的Pod来处理。在Service的整个生命周期，其IP地址都不会变。
+如上图所示，Deployment创建了三个Pod，当外部请求进来的时候，请求会首先到达Service，Service根据标签选择器，去选择对应的Pod来处理。**在Service的整个生命周期，其IP地址都不会变。**
 
 #### （2）暴露Service
 
@@ -1639,6 +1639,16 @@ spec:
         persistentVolumeClaim:
           claimName: my-pvc
 ```
+
+在建投这里还有一个更妙的设计，nas被k8s集群和挂载服务器同时挂载
+
+<img src="assets/image-20240701095452115.png" alt="image-20240701095452115" style="zoom:50%;" />
+
+我们可以在挂载服务器上做一个挂载，例如建投这边是这样的
+
+![image-20240701100118774](assets/image-20240701100118774.png)
+
+在k8s平台上，把nas相同的路径在上面进行挂载，就可以让挂载服务器和k8s拿到相同的数据了。
 
 ## 九、常见问题
 
