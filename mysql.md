@@ -104,7 +104,7 @@ engine = create_engine('mysql://user:password@localhost:3306/test?charset=utf8mb
 
 - **pool_recycle**： MySQL 默认情况下如果一个连接8小时内容没有任何动作（查询请求）就会自动断开链接，出现 MySQL has gone away的错误。设置了 pool_recycle 后 SQLAlchemy 就会在指定时间内回收连接。如果设置为3600 就表示 1小时后该连接会被自动回收。
 
-**pool_pre_ping** ： 这是1.2新增的参数，如果值为True，那么每次从连接池中拿连接的时候，都会向数据库发送一个类似 `select 1` 的测试查询语句来判断服务器是否正常运行。当该连接出现 disconnect 的情况时，该连接连同pool中的其它连接都会被回收。
+- **pool_pre_ping** ： 这是1.2新增的参数，如果值为True，那么每次从连接池中拿连接的时候，都会向数据库发送一个类似 `select 1` 的测试查询语句来判断服务器是否正常运行。当该连接出现 disconnect 的情况时，该连接连同pool中的其它连接都会被回收。
 
 构建好 `engine` 对象的同时，`Pool`和`Dialect`也创建好了，但是这时候并不会立马与数据库建立真正的连接，只有调用 `engine.connect()` 或者 `engine.begin()` 执行SQL请求的时候，才会建立真正的连接。因此 `engine`和`Pool`的行为称之为延迟初始化，等真正要派上用场的时候才去建立连接。
 
@@ -112,7 +112,7 @@ engine = create_engine('mysql://user:password@localhost:3306/test?charset=utf8mb
 
 #### （2）Connection Pooling
 
-为什么要使用连接池，这篇文章https://www.cockroachlabs.com/blog/what-is-connection-pooling/给了非常透彻的说明。在一个常见的数据库连接中，其大体步骤是这样的：
+为什么要使用连接池，这篇文章https://www.cockroachlabs.com/blog/what-is-connection-pooling/ 给了非常透彻的说明。在一个常见的数据库连接中，其大体步骤是这样的：
 
 1. 应用程序使用数据库驱动程序打开一个连接。 
 2. 打开一个网络套接字来连接应用程序和数据库。
