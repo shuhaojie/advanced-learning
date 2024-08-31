@@ -738,6 +738,171 @@ print(stmt)
 
 ### 5. 使用ORM操作数据(重点)
 
+#### （1）Insert
+
+在 SQLAlchemy 中使用 ORM（对象关系映射）时，`Session` 对象是与数据库交互的主要接口，`Session` 负责管理诸如插入、更新和删除数据库记录的操作。
+
+##### ~ 类的实例代表
+
+当使用ORM时，不再直接使用字典来表示要插入的数据，而是使用自定义的 Python 类
+
+```python
+squidward = User(name="squidward", fullname="Squidward Tentacles")
+krabs = User(name="ehkrabs", fullname="Eugene H. Krabs")
+```
+
+在使用 SQLAlchemy ORM 时，可以通过在对象构造函数中使用映射列的名称作为关键字参数来构造对象。这是因为 ORM 映射的类（例如 `User` 类）包含一个自动生成的 `__init__()` 构造函数，该构造函数允许你在创建对象时使用列名作为参数。
+
+就像在 SQLAlchemy Core 的 `Insert` 示例中一样，你可以选择不在对象构造函数中包括主键列（例如 `id` 列），这是因为主键通常由数据库自动生成，特别是在使用自增（auto-incrementing）主键的情况下。可以看到，此时的id是None。
+
+<img src="assets/image-20240818102239408.png" alt="image-20240818102239408" style="zoom: 33%;" />
+
+到目前为止，我们上面的两个对象处于称为瞬态的状态 - 它们不与任何数据库状态关联，并且尚未与可以为它们生成INSERT语句的Session对象关联
+
+##### ~ 将对象添加到session中
+
+为了逐步说明添加过程，我们将在不使用上下文管理器(with语句)的情况下创建一个会话（因此我们必须确保稍后关闭它）
+
+```python
+session = Session(engine)
+```
+
+然后使用`Session.add() `方法将对象添加到会话中。调用此方法时，对象处于`pending`状态，尚未插入
+
+```python
+session.add(squidward)
+session.add(krabs)
+```
+
+当我们有`pending`的对象时，我们可以通过查看 Session 上名为 `Session.new` 的集合来查看此状态：
+
+```python
+>>> session.new
+IdentitySet([User(id=None, name='squidward', fullname='Squidward Tentacles'), User(id=None, name='ehkrabs', fullname='Eugene H. Krabs')])
+```
+
+##### ~ 刷新(flush)
+
+`Session` 使用一种称为 "工作单元模式" 的设计模式。这种模式的**核心理念是将多个数据库操作积累起来，但并不会立即将这些操作提交到数据库**。当你在 `Session` 中添加、修改或删除对象时，**这些更改并不会立即被发送到数据库中。相反，它们被保存在 `Session` 内存中**，等待合适的时机进行处理。当 `Session` 决定将积累的更改发送到数据库时，这个过程就称为flush。
+
+```python
+session.flush()
+```
+
+它对应的SQL语句如下
+
+```sql
+BEGIN (implicit)
+INSERT INTO user_account (name, fullname) VALUES (?, ?) RETURNING id
+[... (insertmanyvalues) 1/2 (ordered; batch not supported)] ('squidward', 'Squidward Tentacles')
+INSERT INTO user_account (name, fullname) VALUES (?, ?) RETURNING id
+[insertmanyvalues 2/2 (ordered; batch not supported)] ('ehkrabs', 'Eugene H. Krabs')
+```
+
+可以看到Session首先被调用来发出 SQL，因此它创建了一个新事务并为两个对象发出了适当的 INSERT 语句。**事务现在保持打开状态，直到我们调用 Session 的任何 `Session.commit()`、`Session.rollback()` 或 `Session.close()` 方法。**
+
+虽然`Session.flush()` 可用于手动推送当前事务的挂起更改，**但通常没有必要**，因为 Session 具有称为自动刷新的行为，我们将在稍后进行说明。每当调用 Session.commit() 时，它也会刷新更改。
+
+##### ~ 主键自动生成
+
+直接上代码，这里注意：获取主键id一定要在session关闭之前
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session
+
+from typing import List
+from typing import Optional
+from sqlalchemy import ForeignKey, String, select
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import relationship
+
+engine = create_engine("mysql+pymysql://root:805115148@localhost:3306/auth?charset=utf8mb4")
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "user_account"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(30))
+    fullname: Mapped[Optional[str]] = mapped_column(String(255))
+    addresses: Mapped[List["Address"]] = relationship(back_populates="user")
+
+    def __repr__(self) -> str:
+        return f"User(id={self.id!r}, name={self.name!r}, fullname={self.fullname!r})"
+
+
+class Address(Base):
+    __tablename__ = "address"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email_address: Mapped[str] = mapped_column(String(255))
+    user_id = mapped_column(ForeignKey("user_account.id"))
+    user: Mapped[User] = relationship(back_populates="addresses")
+
+    def __repr__(self) -> str:
+        return f"Address(id={self.id!r}, email_address={self.email_address!r})"
+
+
+squidward = User(name="squidward", fullname="Squidward Tentacles")
+krabs = User(name="ehkrabs", fullname="Eugene H. Krabs")
+
+with Session(engine) as session:
+    session.add(squidward)
+    session.add(krabs)
+    session.commit()
+    # 一定要注意: 在session.close()之后前查
+    s_id = squidward.id
+    # 使用了上下文管理器, 可以不用显示的来关闭session
+    session.close()
+```
+
+##### ~ 提交(commit)
+
+```python
+session.commit()
+```
+
+当你使用 `session.commit()` 提交事务后，所有与该 `Session` 关联的对象仍然保持与 `Session` 的连接。这意味着：
+
+（1）事务的提交：
+
+- `session.commit()` 会提交当前事务，将你所做的所有更改（例如插入、更新、删除操作）实际保存到数据库中。
+- 事务提交后，数据库中对应的表会反映出这些更改。
+
+（2）对象仍然附加到 `Session`
+
+- 提交事务后，尽管数据库中的数据已经更新，但这些对象（如 `squidward` 和 `krabs`）仍然与 `Session` 保持关联。这些对象还在 `Session` 的管理之下，并且它们的状态（例如，是否被修改）仍然会被 `Session` 跟踪。
+- 只要 `Session` 还未关闭，**你对这些对象的任何更改仍然会被`Session`记录下来，并且可以在下次提交时同步到数据库中**。
+
+（3）session关闭
+
+- 对象与 `Session` 的这种连接状态会一直持续到 `Session` 被显式关闭（通常通过调用 `session.close()`）或者 `Session` 退出其上下文（如果你使用的是 `with` 语句）。
+- 当 `Session` 关闭后，这些对象会变成“游离状态”（detached），它们将不再与 `Session` 关联，也不会再自动跟踪数据库中的变化。
+
+> 注意：
+
+
+
+#### （2）Update
+
+#### （3）Delete
+
+#### （4）
+
+#### （5）回滚
+
+#### （6）关闭Session
+
+
+
+
+
+
+
 ### 6. 使用ORM相关对象
 
  
